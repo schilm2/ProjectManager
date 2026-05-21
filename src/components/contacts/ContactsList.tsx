@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { Database } from 'sql.js';
 import { Contact } from '../../types';
-import { getAllContacts, createContact, deleteContact } from '../../db/database';
+import { createContact, deleteContact } from '../../db/database';
 
 interface ContactsListProps {
   db: Database;
+  contacts: Contact[];
+  onRefresh: () => void;
   onSelect: (contact: Contact) => void;
   onDelete: (id: string) => void;
   selectedId: string | null;
 }
 
-export function ContactsList({ db, onSelect, onDelete, selectedId }: ContactsListProps) {
-  const [contacts, setContacts] = useState<Contact[]>(() => getAllContacts(db));
+export function ContactsList({ db, contacts, onRefresh, onSelect, onDelete, selectedId }: ContactsListProps) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
@@ -22,7 +23,7 @@ export function ContactsList({ db, onSelect, onDelete, selectedId }: ContactsLis
     e.preventDefault();
     if (!name.trim()) return;
     createContact(db, name.trim(), nickname.trim(), email.trim(), phone.trim());
-    setContacts(getAllContacts(db));
+    onRefresh();
     setName('');
     setNickname('');
     setEmail('');
@@ -33,7 +34,7 @@ export function ContactsList({ db, onSelect, onDelete, selectedId }: ContactsLis
   function handleDelete(e: React.MouseEvent, id: string) {
     e.stopPropagation();
     deleteContact(db, id);
-    setContacts(getAllContacts(db));
+    onRefresh();
     onDelete(id);
   }
 

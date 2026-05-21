@@ -760,6 +760,49 @@ body {
   gap: var(--space-sm);
 }
 
+/* Inline editing */
+.editable-field {
+  cursor: text;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s;
+}
+
+.editable-field:hover {
+  background: oklch(94% 0.01 250);
+  outline: 1px dashed var(--color-border);
+  outline-offset: 2px;
+}
+
+.editable-placeholder {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.editable-input {
+  width: 100%;
+  padding: 2px var(--space-xs);
+  border: 1.5px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  color: inherit;
+  background: var(--color-surface);
+  outline: none;
+}
+
+.editable-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--space-sm);
+}
+
+.editable-description {
+  resize: vertical;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-lg);
+}
+
 /* Project Detail */
 .project-detail h2 {
   font-size: 1.5rem;
