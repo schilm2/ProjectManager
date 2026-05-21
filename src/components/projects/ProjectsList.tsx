@@ -1,18 +1,17 @@
 import { useState } from 'react';
 import { Database } from 'sql.js';
 import { Project } from '../../types';
-import { createProject, deleteProject } from '../../db/database';
+import { getAllProjects, createProject, deleteProject } from '../../db/database';
 
 interface ProjectsListProps {
   db: Database;
-  projects: Project[];
-  onRefresh: () => void;
   onSelect: (project: Project) => void;
   onDelete: (id: string) => void;
   selectedId: string | null;
 }
 
-export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, selectedId }: ProjectsListProps) {
+export function ProjectsList({ db, onSelect, onDelete, selectedId }: ProjectsListProps) {
+  const [projects, setProjects] = useState<Project[]>(() => getAllProjects(db));
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -21,7 +20,7 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
     e.preventDefault();
     if (!name.trim()) return;
     createProject(db, name.trim(), description.trim());
-    onRefresh();
+    setProjects(getAllProjects(db));
     setName('');
     setDescription('');
     setShowForm(false);
@@ -30,7 +29,7 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
   function handleDelete(e: React.MouseEvent, id: string) {
     e.stopPropagation();
     deleteProject(db, id);
-    onRefresh();
+    setProjects(getAllProjects(db));
     onDelete(id);
   }
 
