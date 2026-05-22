@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
+import { CircleAccent } from '../ui/CircleAccent';
 
 export function Sidebar() {
   return (
     <nav className="sidebar">
       <div className="sidebar-brand">
-        <h1>PM</h1>
+        <h1><CircleAccent>PM</CircleAccent></h1>
       </div>
       <ul className="sidebar-nav">
         <li>
@@ -29,6 +30,12 @@ export function Sidebar() {
           <NavLink to="/contacts">
             <span className="nav-icon">&#9787;</span>
             <span>Kontakte</span>
+          </NavLink>
+        </li>
+        <li>
+          <NavLink to="/settings">
+            <span className="nav-icon">&#9874;</span>
+            <span>Einstellungen</span>
           </NavLink>
         </li>
       </ul>

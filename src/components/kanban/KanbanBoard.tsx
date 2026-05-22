@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Database } from 'sql.js';
 import { Todo } from '../../types';
 import {
@@ -16,12 +17,15 @@ import {
 } from '../../db/database';
 import { KanbanColumn } from './KanbanColumn';
 import { TodoDialog } from './TodoDialog';
+import { ProjectOverview } from './ProjectOverview';
 
 interface KanbanBoardProps {
   db: Database;
 }
 
 export function KanbanBoard({ db }: KanbanBoardProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [todos, setTodos] = useState<Todo[]>(() => getAllTodos(db));
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showDialog, setShowDialog] = useState(false);
@@ -29,6 +33,18 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
   const refresh = useCallback(() => {
     setTodos(getAllTodos(db));
   }, [db]);
+
+  useEffect(() => {
+    const state = location.state as { editTodoId?: string } | null;
+    if (state?.editTodoId) {
+      const todo = todos.find((t) => t.id === state.editTodoId) ?? null;
+      if (todo) {
+        setEditingTodo(todo);
+        setShowDialog(true);
+      }
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, todos, navigate, location.pathname]);
 
   function handleCreate() {
     setEditingTodo(null);
@@ -70,15 +86,17 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
 
   return (
     <div className="kanban-page">
-      <div className="page-header">
-        <h2>Board</h2>
-        <button className="btn btn-primary" onClick={handleCreate}>
-          + Neues ToDo
-        </button>
+      <div className="board-actions">
+        <button className="btn btn-primary" onClick={handleCreate}>+ Neues ToDo</button>
+        <button className="btn" onClick={() => navigate('/notes', { state: { autoCreate: true } })}>+ Neue Notiz</button>
+        <button className="btn" onClick={() => navigate('/projects', { state: { autoCreate: true } })}>+ Neues Projekt</button>
+        <button className="btn" onClick={() => navigate('/contacts', { state: { autoCreate: true } })}>+ Neuer Kontakt</button>
       </div>
+      <ProjectOverview db={db} />
       <div className="kanban-board">
         <KanbanColumn
           title="Open"
+          status="open"
           todos={open}
           onStatusChange={handleStatusChange}
           onEdit={handleEdit}
@@ -87,6 +105,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
         />
         <KanbanColumn
           title="In Progress"
+          status="in_progress"
           todos={inProgress}
           onStatusChange={handleStatusChange}
           onEdit={handleEdit}
@@ -95,6 +114,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
         />
         <KanbanColumn
           title="Done"
+          status="done"
           todos={done}
           onStatusChange={handleStatusChange}
           onEdit={handleEdit}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Database } from 'sql.js';
 import { Contact } from '../../types';
 import { createContact, deleteContact } from '../../db/database';
@@ -10,10 +10,18 @@ interface ContactsListProps {
   onSelect: (contact: Contact) => void;
   onDelete: (id: string) => void;
   selectedId: string | null;
+  autoCreate?: boolean;
 }
 
-export function ContactsList({ db, contacts, onRefresh, onSelect, onDelete, selectedId }: ContactsListProps) {
+export function ContactsList({ db, contacts, onRefresh, onSelect, onDelete, selectedId, autoCreate }: ContactsListProps) {
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    if (autoCreate) {
+      setShowForm(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [autoCreate]);
   const [name, setName] = useState('');
   const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');

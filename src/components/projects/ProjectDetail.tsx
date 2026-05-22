@@ -1,5 +1,8 @@
 import { useMemo, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Database } from 'sql.js';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Project, ProjectUpdate } from '../../types';
 import { getProjectStats, getProjectTodos, getProjectNotes } from '../../db/database';
 
@@ -16,6 +19,7 @@ function extractTitle(content: string): string {
 type EditableField = 'name' | 'description';
 
 export function ProjectDetail({ db, project, onUpdate }: ProjectDetailProps) {
+  const navigate = useNavigate();
   const stats = useMemo(() => getProjectStats(db, project.id), [db, project.id]);
   const todos = useMemo(() => getProjectTodos(db, project.id), [db, project.id]);
   const notes = useMemo(() => getProjectNotes(db, project.id), [db, project.id]);
@@ -118,11 +122,15 @@ export function ProjectDetail({ db, project, onUpdate }: ProjectDetailProps) {
           ref={descTriggerRef}
           className={`editable-field editable-trigger${!project.description ? ' editable-placeholder' : ''}`}
           onClick={() => startEditing('description')}
-          aria-label={project.description ? `Beschreibung bearbeiten: ${project.description}` : 'Beschreibung hinzufügen'}
+          aria-label={project.description ? `Beschreibung bearbeiten` : 'Beschreibung hinzufügen'}
         >
-          <p className="project-description">
-            {project.description || 'Beschreibung hinzufügen…'}
-          </p>
+          {project.description ? (
+            <div className="project-description project-description-md">
+              <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
+            </div>
+          ) : (
+            <p className="project-description">Beschreibung hinzufügen…</p>
+          )}
         </button>
       )}
 
@@ -150,7 +158,14 @@ export function ProjectDetail({ db, project, onUpdate }: ProjectDetailProps) {
         {todos.length > 0 ? (
           <ul className="link-list">
             {todos.map((t) => (
-              <li key={t.id} className={`link-item status-${t.status}`}>
+              <li
+                key={t.id}
+                className={`link-item status-${t.status} link-item-clickable`}
+                onClick={() => navigate('/', { state: { editTodoId: t.id } })}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') navigate('/', { state: { editTodoId: t.id } }); }}
+              >
                 <span className={`priority-dot priority-${t.priority}`} />
                 <span>{t.name}</span>
                 <span className="status-label">{t.status.replace('_', ' ')}</span>
@@ -167,7 +182,14 @@ export function ProjectDetail({ db, project, onUpdate }: ProjectDetailProps) {
         {notes.length > 0 ? (
           <ul className="link-list">
             {notes.map((n) => (
-              <li key={n.id} className="link-item">
+              <li
+                key={n.id}
+                className="link-item link-item-clickable"
+                onClick={() => navigate('/notes', { state: { selectedNoteId: n.id } })}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') navigate('/notes', { state: { selectedNoteId: n.id } }); }}
+              >
                 <span>{extractTitle(n.content)}</span>
                 <span className="note-date">{new Date(n.createdAt).toLocaleDateString('de-DE')}</span>
               </li>

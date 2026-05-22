@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Database } from 'sql.js';
 import { Note } from '../../types';
+import { createNote, getAllNotes } from '../../db/database';
 import { NotesList } from './NotesList';
 import { NoteEditor } from './NoteEditor';
 
@@ -9,8 +11,27 @@ interface NotesPageProps {
 }
 
 export function NotesPage({ db }: NotesPageProps) {
+  const location = useLocation();
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const didAutoCreate = useRef(false);
+
+  useEffect(() => {
+    const state = location.state as { autoCreate?: boolean; selectedNoteId?: string } | null;
+    if (state?.autoCreate && !didAutoCreate.current) {
+      didAutoCreate.current = true;
+      const note = createNote(db);
+      setRefreshKey((k) => k + 1);
+      setSelectedNote(note);
+    } else if (state?.selectedNoteId && !didAutoCreate.current) {
+      didAutoCreate.current = true;
+      const allNotes = getAllNotes(db);
+      const target = allNotes.find((n) => n.id === state.selectedNoteId) ?? null;
+      if (target) {
+        setSelectedNote(target);
+      }
+    }
+  }, [db, location.state]);
 
   function handleDelete(id: string) {
     if (selectedNote?.id === id) {

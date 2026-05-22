@@ -79,6 +79,7 @@ async function initDB(): Promise<Database> {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'active',
       created_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS contacts (
@@ -89,7 +90,23 @@ async function initDB(): Promise<Database> {
       phone TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS sync_state (
+      item_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      item_type TEXT NOT NULL,
+      content_hash TEXT NOT NULL,
+      synced_at TEXT NOT NULL,
+      PRIMARY KEY (item_id, project_id)
+    );
   `);
+
+  // Migration: add status column to projects if missing
+  try {
+    db.run("ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '';
+    if (!msg.includes('duplicate column')) throw e;
+  }
 
   persist();
   return db;
@@ -146,6 +163,20 @@ export function createTodo(database: Database, name: string, priority: Todo['pri
   );
   persist();
   return { id, name, priority, status: 'open', doneAt: null, createdAt };
+}
+
+export function markProjectTodosDone(database: Database, projectId: string): void {
+  const doneAt = new Date().toISOString();
+  database.run(
+    `UPDATE todos SET status = 'done', done_at = ?
+     WHERE id IN (
+       SELECT t.id FROM todos t
+       JOIN todo_projects tp ON tp.todo_id = t.id
+       WHERE tp.project_id = ? AND t.status != 'done'
+     )`,
+    [doneAt, projectId]
+  );
+  persist();
 }
 
 export function updateTodoStatus(database: Database, id: string, status: Todo['status']): void {
@@ -257,22 +288,47 @@ export function getNoteContacts(database: Database, noteId: string): string[] {
 // --- Projects ---
 
 export function getAllProjects(database: Database): Project[] {
-  const results = database.exec('SELECT id, name, description, created_at FROM projects ORDER BY name');
+  const results = database.exec('SELECT id, name, description, status, created_at FROM projects ORDER BY name');
   if (!results.length) return [];
   return results[0].values.map((row) => ({
     id: row[0] as string,
     name: row[1] as string,
     description: row[2] as string,
-    createdAt: row[3] as string,
+    status: (row[3] as string ?? 'active') as Project['status'],
+    createdAt: row[4] as string,
   }));
 }
 
 export function createProject(database: Database, name: string, description: string): Project {
   const id = uuid();
   const createdAt = new Date().toISOString();
-  database.run('INSERT INTO projects (id, name, description, created_at) VALUES (?, ?, ?, ?)', [id, name, description, createdAt]);
+  database.run('INSERT INTO projects (id, name, description, status, created_at) VALUES (?, ?, ?, ?, ?)', [id, name, description, 'active', createdAt]);
   persist();
-  return { id, name, description, createdAt };
+  return { id, name, description, status: 'active', createdAt };
+}
+
+export function updateProjectStatus(database: Database, id: string, status: Project['status']): void {
+  database.run('UPDATE projects SET status = ? WHERE id = ?', [status, id]);
+  persist();
+}
+
+export function getOpenTodosForProject(database: Database, projectId: string): Todo[] {
+  const results = database.exec(
+    `SELECT t.id, t.name, t.priority, t.status, t.done_at, t.created_at
+     FROM todos t JOIN todo_projects tp ON tp.todo_id = t.id
+     WHERE tp.project_id = ? AND t.status != 'done'
+     ORDER BY t.created_at DESC`,
+    [projectId]
+  );
+  if (!results.length) return [];
+  return results[0].values.map((row) => ({
+    id: row[0] as string,
+    name: row[1] as string,
+    priority: row[2] as Todo['priority'],
+    status: row[3] as Todo['status'],
+    doneAt: row[4] as string | null,
+    createdAt: row[5] as string,
+  }));
 }
 
 export function updateProject(database: Database, id: string, name: string, description: string): void {
@@ -406,4 +462,40 @@ export function getContactNotes(database: Database, contactId: string): Note[] {
     content: row[1] as string,
     createdAt: row[2] as string,
   }));
+}
+
+// --- Sync State ---
+
+export interface SyncStateEntry {
+  itemId: string;
+  projectId: string;
+  itemType: 'todo' | 'note';
+  contentHash: string;
+  syncedAt: string;
+}
+
+export function getSyncState(database: Database, projectId: string): SyncStateEntry[] {
+  const results = database.exec(
+    'SELECT item_id, project_id, item_type, content_hash, synced_at FROM sync_state WHERE project_id = ?',
+    [projectId]
+  );
+  if (!results.length) return [];
+  return results[0].values.map((row) => ({
+    itemId: row[0] as string,
+    projectId: row[1] as string,
+    itemType: row[2] as SyncStateEntry['itemType'],
+    contentHash: row[3] as string,
+    syncedAt: row[4] as string,
+  }));
+}
+
+export function upsertSyncState(database: Database, entries: SyncStateEntry[]): void {
+  for (const entry of entries) {
+    database.run(
+      `INSERT OR REPLACE INTO sync_state (item_id, project_id, item_type, content_hash, synced_at)
+       VALUES (?, ?, ?, ?, ?)`,
+      [entry.itemId, entry.projectId, entry.itemType, entry.contentHash, entry.syncedAt]
+    );
+  }
+  persist();
 }

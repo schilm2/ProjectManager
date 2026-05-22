@@ -6,6 +6,7 @@ import { KanbanBoard } from './components/kanban/KanbanBoard';
 import { NotesPage } from './components/notes/NotesPage';
 import { ProjectsPage } from './components/projects/ProjectsPage';
 import { ContactsPage } from './components/contacts/ContactsPage';
+import { SettingsPage } from './components/settings/SettingsPage';
 
 interface ErrorBoundaryState {
   error: Error | null;
@@ -62,6 +63,7 @@ function App() {
             <Route path="/notes" element={<NotesPage db={db} />} />
             <Route path="/projects" element={<ProjectsPage db={db} />} />
             <Route path="/contacts" element={<ContactsPage db={db} />} />
+            <Route path="/settings" element={<SettingsPage db={db} />} />
           </Route>
         </Routes>
       </BrowserRouter>

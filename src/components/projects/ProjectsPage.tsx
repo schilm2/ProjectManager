@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Database } from 'sql.js';
 import { Project, ProjectUpdate } from '../../types';
 import { updateProject, getAllProjects } from '../../db/database';
@@ -10,8 +11,15 @@ interface ProjectsPageProps {
 }
 
 export function ProjectsPage({ db }: ProjectsPageProps) {
+  const location = useLocation();
+  const state = location.state as { autoCreate?: boolean; selectedProjectId?: string } | null;
+  const autoCreate = !!state?.autoCreate;
   const [projects, setProjects] = useState<Project[]>(() => getAllProjects(db));
-  const [selected, setSelected] = useState<Project | null>(null);
+  const [selected, setSelected] = useState<Project | null>(() => {
+    const id = state?.selectedProjectId;
+    if (!id) return null;
+    return getAllProjects(db).find((p) => p.id === id) ?? null;
+  });
 
   const refresh = useCallback(() => setProjects(getAllProjects(db)), [db]);
 
@@ -33,7 +41,7 @@ export function ProjectsPage({ db }: ProjectsPageProps) {
 
   return (
     <div className="split-page">
-      <ProjectsList db={db} projects={projects} onRefresh={refresh} onSelect={setSelected} onDelete={handleDelete} selectedId={selected?.id ?? null} />
+      <ProjectsList db={db} projects={projects} onRefresh={refresh} onSelect={setSelected} onDelete={handleDelete} selectedId={selected?.id ?? null} autoCreate={autoCreate} />
       <div className="split-detail">
         {selected ? (
           <ProjectDetail db={db} project={selected} onUpdate={handleUpdate} />

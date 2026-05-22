@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Database } from 'sql.js';
 import { Contact, ContactUpdate } from '../../types';
 import { updateContact, getAllContacts } from '../../db/database';
@@ -10,6 +11,8 @@ interface ContactsPageProps {
 }
 
 export function ContactsPage({ db }: ContactsPageProps) {
+  const location = useLocation();
+  const autoCreate = !!(location.state as { autoCreate?: boolean } | null)?.autoCreate;
   const [contacts, setContacts] = useState<Contact[]>(() => getAllContacts(db));
   const [selected, setSelected] = useState<Contact | null>(null);
 
@@ -33,7 +36,7 @@ export function ContactsPage({ db }: ContactsPageProps) {
 
   return (
     <div className="split-page">
-      <ContactsList db={db} contacts={contacts} onRefresh={refresh} onSelect={setSelected} onDelete={handleDelete} selectedId={selected?.id ?? null} />
+      <ContactsList db={db} contacts={contacts} onRefresh={refresh} onSelect={setSelected} onDelete={handleDelete} selectedId={selected?.id ?? null} autoCreate={autoCreate} />
       <div className="split-detail">
         {selected ? (
           <ContactDetail db={db} contact={selected} onUpdate={handleUpdate} />
