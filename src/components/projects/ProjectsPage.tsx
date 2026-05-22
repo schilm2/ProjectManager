@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Database } from 'sql.js';
-import { Project } from '../../types';
+import { Project, ProjectUpdate } from '../../types';
 import { updateProject, getAllProjects } from '../../db/database';
 import { ProjectsList } from './ProjectsList';
 import { ProjectDetail } from './ProjectDetail';
@@ -16,16 +16,19 @@ export function ProjectsPage({ db }: ProjectsPageProps) {
   const refresh = useCallback(() => setProjects(getAllProjects(db)), [db]);
 
   function handleDelete(id: string) {
+    // ProjectsList already calls onRefresh before invoking onDelete — no second refresh needed
     if (selected?.id === id) setSelected(null);
-    refresh();
   }
 
-  function handleUpdate(name: string, description: string) {
+  function handleUpdate({ name, description }: ProjectUpdate) {
     if (!selected) return;
-    updateProject(db, selected.id, name, description);
-    const updated = { ...selected, name, description };
-    setSelected(updated);
-    refresh();
+    try {
+      updateProject(db, selected.id, name, description);
+      setSelected({ ...selected, name, description });
+      refresh();
+    } catch (err) {
+      console.error('Failed to update project', err);
+    }
   }
 
   return (

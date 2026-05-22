@@ -1,37 +1,83 @@
 import { useMemo, useState, useRef } from 'react';
 import { Database } from 'sql.js';
-import { Contact } from '../../types';
+import { Contact, ContactUpdate } from '../../types';
 import { getContactTodos, getContactNotes } from '../../db/database';
 
 interface ContactDetailProps {
   db: Database;
   contact: Contact;
-  onUpdate: (name: string, nickname: string, email: string, phone: string) => void;
+  onUpdate: (update: ContactUpdate) => void;
 }
 
 function extractTitle(content: string): string {
   return content.split('\n')[0].replace(/^#+\s*/, '') || 'Unbenannt';
 }
 
-type EditableField = 'name' | 'nickname' | 'email' | 'phone';
+type EditableField = keyof ContactUpdate;
 
 export function ContactDetail({ db, contact, onUpdate }: ContactDetailProps) {
   const todos = useMemo(() => getContactTodos(db, contact.id), [db, contact.id]);
   const notes = useMemo(() => getContactNotes(db, contact.id), [db, contact.id]);
 
   const [editingField, setEditingField] = useState<EditableField | null>(null);
-  const [draft, setDraft] = useState({ name: contact.name, nickname: contact.nickname, email: contact.email, phone: contact.phone });
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [draft, setDraft] = useState<ContactUpdate>({
+    name: contact.name,
+    nickname: contact.nickname,
+    email: contact.email,
+    phone: contact.phone,
+  });
+
+  const nameRef = useRef<HTMLInputElement>(null);
+  const nicknameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+
+  const nameTriggerRef = useRef<HTMLButtonElement>(null);
+  const nicknameTriggerRef = useRef<HTMLButtonElement>(null);
+  const emailTriggerRef = useRef<HTMLButtonElement>(null);
+  const phoneTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const fieldRefs: Record<EditableField, React.RefObject<HTMLInputElement | null>> = {
+    name: nameRef,
+    nickname: nicknameRef,
+    email: emailRef,
+    phone: phoneRef,
+  };
+
+  const triggerRefs: Record<EditableField, React.RefObject<HTMLButtonElement | null>> = {
+    name: nameTriggerRef,
+    nickname: nicknameTriggerRef,
+    email: emailTriggerRef,
+    phone: phoneTriggerRef,
+  };
 
   function startEditing(field: EditableField) {
     setDraft({ name: contact.name, nickname: contact.nickname, email: contact.email, phone: contact.phone });
     setEditingField(field);
-    setTimeout(() => inputRef.current?.select(), 0);
+    setTimeout(() => {
+      const ref = fieldRefs[field].current as HTMLInputElement | null;
+      ref?.focus();
+      ref?.select();
+    }, 0);
   }
 
   function save() {
     const name = draft.name.trim() || contact.name;
-    onUpdate(name, draft.nickname, draft.email, draft.phone);
+    const update: ContactUpdate = { name, nickname: draft.nickname, email: draft.email, phone: draft.phone };
+    const unchanged =
+      update.name === contact.name &&
+      update.nickname === contact.nickname &&
+      update.email === contact.email &&
+      update.phone === contact.phone;
+    if (unchanged) {
+      setEditingField(null);
+      return;
+    }
+    try {
+      onUpdate(update);
+    } catch (err) {
+      console.error('Failed to update contact', err);
+    }
     setEditingField(null);
   }
 
@@ -40,80 +86,102 @@ export function ContactDetail({ db, contact, onUpdate }: ContactDetailProps) {
     setEditingField(null);
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Escape') { cancel(); return; }
-    if (e.key === 'Enter') { e.preventDefault(); save(); }
+  function returnFocus(field: EditableField | null) {
+    if (!field) return;
+    setTimeout(() => triggerRefs[field].current?.focus(), 0);
   }
 
-  function inlineInput(field: EditableField, placeholder: string, type = 'text') {
-    return editingField === field ? (
-      <input
-        ref={inputRef}
-        type={type}
-        className="editable-input"
-        value={draft[field]}
-        onChange={(e) => setDraft({ ...draft, [field]: e.target.value })}
-        onBlur={save}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-      />
-    ) : null;
+  function handleBlur(e: React.FocusEvent<HTMLInputElement>) {
+    const panel = e.currentTarget.closest('.contact-detail');
+    if (panel?.contains(e.relatedTarget as Node)) return;
+    save();
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent, field: EditableField) {
+    if (e.key === 'Escape') { cancel(); returnFocus(field); return; }
+    if (e.key === 'Enter') { e.preventDefault(); save(); returnFocus(field); }
+  }
+
+  function renderField(
+    field: EditableField,
+    triggerContent: React.ReactNode,
+    triggerClassName: string,
+    triggerAriaLabel: string,
+    inputType = 'text',
+    inputPlaceholder = '',
+  ) {
+    if (editingField === field) {
+      return (
+        <input
+          ref={fieldRefs[field] as React.RefObject<HTMLInputElement>}
+          type={inputType}
+          aria-label={field === 'name' ? 'Name' : triggerAriaLabel.split(':')[0].replace(' bearbeiten', '')}
+          className={`editable-input${field === 'name' ? ' editable-title' : ''}`}
+          value={draft[field]}
+          onChange={(e) => setDraft({ ...draft, [field]: e.target.value })}
+          onBlur={handleBlur}
+          onKeyDown={(e) => handleKeyDown(e, field)}
+          placeholder={inputPlaceholder}
+        />
+      );
+    }
+    return (
+      <button
+        ref={triggerRefs[field] as React.RefObject<HTMLButtonElement>}
+        className={triggerClassName}
+        onClick={() => startEditing(field)}
+        aria-label={triggerAriaLabel}
+      >
+        {triggerContent}
+      </button>
+    );
   }
 
   return (
     <div className="contact-detail">
-      {editingField === 'name' ? (
-        <input
-          ref={inputRef}
-          className="editable-input editable-title"
-          value={draft.name}
-          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-          onBlur={save}
-          onKeyDown={handleKeyDown}
-        />
-      ) : (
-        <h2
-          className="editable-field"
-          onClick={() => startEditing('name')}
-          title="Klicken zum Bearbeiten"
-        >
-          {contact.name}
-        </h2>
+      {renderField(
+        'name',
+        <h2>{contact.name}</h2>,
+        'editable-field editable-trigger',
+        `Name bearbeiten: ${contact.name}`,
       )}
 
-      {editingField === 'nickname' ? inlineInput('nickname', 'Spitzname…') : (
-        <p
-          className={`contact-nickname editable-field${!contact.nickname ? ' editable-placeholder' : ''}`}
-          onClick={() => startEditing('nickname')}
-          title="Klicken zum Bearbeiten"
-        >
+      {renderField(
+        'nickname',
+        <p className={`contact-nickname${!contact.nickname ? ' editable-placeholder' : ''}`}>
           {contact.nickname ? `"${contact.nickname}"` : 'Spitzname hinzufügen…'}
-        </p>
+        </p>,
+        'editable-field editable-trigger',
+        contact.nickname ? `Spitzname bearbeiten: ${contact.nickname}` : 'Spitzname hinzufügen',
+        'text',
+        'Spitzname…',
       )}
 
       <div className="contact-info">
         <div className="info-row">
           <span className="info-label">E-Mail:</span>
-          {editingField === 'email' ? inlineInput('email', 'E-Mail…', 'email') : (
-            <span
-              className={`editable-field${!contact.email ? ' editable-placeholder' : ''}`}
-              onClick={() => startEditing('email')}
-              title="Klicken zum Bearbeiten"
-            >
+          {renderField(
+            'email',
+            <span className={!contact.email ? 'editable-placeholder' : ''}>
               {contact.email || 'E-Mail hinzufügen…'}
-            </span>
+            </span>,
+            'editable-field editable-trigger',
+            contact.email ? `E-Mail bearbeiten: ${contact.email}` : 'E-Mail hinzufügen',
+            'email',
+            'E-Mail…',
           )}
         </div>
         <div className="info-row">
           <span className="info-label">Telefon:</span>
-          {editingField === 'phone' ? inlineInput('phone', 'Telefon…', 'tel') : (
-            <span
-              className={`editable-field${!contact.phone ? ' editable-placeholder' : ''}`}
-              onClick={() => startEditing('phone')}
-              title="Klicken zum Bearbeiten"
-            >
+          {renderField(
+            'phone',
+            <span className={!contact.phone ? 'editable-placeholder' : ''}>
               {contact.phone || 'Telefon hinzufügen…'}
-            </span>
+            </span>,
+            'editable-field editable-trigger',
+            contact.phone ? `Telefon bearbeiten: ${contact.phone}` : 'Telefon hinzufügen',
+            'tel',
+            'Telefon…',
           )}
         </div>
       </div>

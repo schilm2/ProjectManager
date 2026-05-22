@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Database } from 'sql.js';
-import { Contact } from '../../types';
+import { Contact, ContactUpdate } from '../../types';
 import { updateContact, getAllContacts } from '../../db/database';
 import { ContactsList } from './ContactsList';
 import { ContactDetail } from './ContactDetail';
@@ -16,16 +16,19 @@ export function ContactsPage({ db }: ContactsPageProps) {
   const refresh = useCallback(() => setContacts(getAllContacts(db)), [db]);
 
   function handleDelete(id: string) {
+    // ContactsList already calls onRefresh before invoking onDelete — no second refresh needed
     if (selected?.id === id) setSelected(null);
-    refresh();
   }
 
-  function handleUpdate(name: string, nickname: string, email: string, phone: string) {
+  function handleUpdate({ name, nickname, email, phone }: ContactUpdate) {
     if (!selected) return;
-    updateContact(db, selected.id, name, nickname, email, phone);
-    const updated = { ...selected, name, nickname, email, phone };
-    setSelected(updated);
-    refresh();
+    try {
+      updateContact(db, selected.id, name, nickname, email, phone);
+      setSelected({ ...selected, name, nickname, email, phone });
+      refresh();
+    } catch (err) {
+      console.error('Failed to update contact', err);
+    }
   }
 
   return (

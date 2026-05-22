@@ -1,58 +1,77 @@
 import { useMemo, useState, useRef } from 'react';
 import { Database } from 'sql.js';
-import { Project } from '../../types';
+import { Project, ProjectUpdate } from '../../types';
 import { getProjectStats, getProjectTodos, getProjectNotes } from '../../db/database';
 
 interface ProjectDetailProps {
   db: Database;
   project: Project;
-  onUpdate: (name: string, description: string) => void;
+  onUpdate: (update: ProjectUpdate) => void;
 }
 
 function extractTitle(content: string): string {
   return content.split('\n')[0].replace(/^#+\s*/, '') || 'Unbenannt';
 }
 
+type EditableField = 'name' | 'description';
+
 export function ProjectDetail({ db, project, onUpdate }: ProjectDetailProps) {
   const stats = useMemo(() => getProjectStats(db, project.id), [db, project.id]);
   const todos = useMemo(() => getProjectTodos(db, project.id), [db, project.id]);
   const notes = useMemo(() => getProjectNotes(db, project.id), [db, project.id]);
 
-  const [editingField, setEditingField] = useState<'name' | 'description' | null>(null);
-  const [draftName, setDraftName] = useState(project.name);
-  const [draftDescription, setDraftDescription] = useState(project.description);
+  const [editingField, setEditingField] = useState<EditableField | null>(null);
+  const [draft, setDraft] = useState<ProjectUpdate>({ name: project.name, description: project.description });
+
   const nameRef = useRef<HTMLInputElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
+  const nameTriggerRef = useRef<HTMLButtonElement>(null);
+  const descTriggerRef = useRef<HTMLButtonElement>(null);
 
   const openPct = stats.total > 0 ? (stats.open / stats.total) * 100 : 0;
   const progressPct = stats.total > 0 ? (stats.inProgress / stats.total) * 100 : 0;
   const donePct = stats.total > 0 ? (stats.done / stats.total) * 100 : 0;
 
-  function startEditing(field: 'name' | 'description') {
-    setDraftName(project.name);
-    setDraftDescription(project.description);
+  function startEditing(field: EditableField) {
+    setDraft({ name: project.name, description: project.description });
     setEditingField(field);
     setTimeout(() => {
-      if (field === 'name') nameRef.current?.select();
-      else descRef.current?.select();
+      if (field === 'name') { nameRef.current?.focus(); nameRef.current?.select(); }
+      else { descRef.current?.focus(); descRef.current?.select(); }
     }, 0);
   }
 
   function save() {
-    const name = draftName.trim() || project.name;
-    onUpdate(name, draftDescription);
+    const name = draft.name.trim() || project.name;
+    const description = draft.description;
+    if (name === project.name && description === project.description) {
+      setEditingField(null);
+      return;
+    }
+    try {
+      onUpdate({ name, description });
+    } catch (err) {
+      console.error('Failed to update project', err);
+    }
     setEditingField(null);
   }
 
   function cancel() {
-    setDraftName(project.name);
-    setDraftDescription(project.description);
+    setDraft({ name: project.name, description: project.description });
     setEditingField(null);
   }
 
-  function handleKeyDown(e: React.KeyboardEvent, field: 'name' | 'description') {
-    if (e.key === 'Escape') { cancel(); return; }
-    if (e.key === 'Enter' && field === 'name') { e.preventDefault(); save(); }
+  function returnFocus(field: EditableField | null) {
+    setTimeout(() => {
+      if (field === 'name') nameTriggerRef.current?.focus();
+      else if (field === 'description') descTriggerRef.current?.focus();
+    }, 0);
+  }
+
+  function handleBlur(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    const panel = e.currentTarget.closest('.project-detail');
+    if (panel?.contains(e.relatedTarget as Node)) return;
+    save();
   }
 
   return (
@@ -60,48 +79,63 @@ export function ProjectDetail({ db, project, onUpdate }: ProjectDetailProps) {
       {editingField === 'name' ? (
         <input
           ref={nameRef}
+          aria-label="Projektname"
           className="editable-input editable-title"
-          value={draftName}
-          onChange={(e) => setDraftName(e.target.value)}
-          onBlur={save}
-          onKeyDown={(e) => handleKeyDown(e, 'name')}
+          value={draft.name}
+          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+          onBlur={handleBlur}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') { const f = editingField; cancel(); returnFocus(f); return; }
+            if (e.key === 'Enter') { e.preventDefault(); const f = editingField; save(); returnFocus(f); }
+          }}
         />
       ) : (
-        <h2
-          className="editable-field"
+        <button
+          ref={nameTriggerRef}
+          className="editable-field editable-trigger"
           onClick={() => startEditing('name')}
-          title="Klicken zum Bearbeiten"
+          aria-label={`Projektname bearbeiten: ${project.name}`}
         >
-          {project.name}
-        </h2>
+          <h2>{project.name}</h2>
+        </button>
       )}
 
       {editingField === 'description' ? (
         <textarea
           ref={descRef}
+          aria-label="Beschreibung"
           className="editable-input editable-description"
-          value={draftDescription}
-          onChange={(e) => setDraftDescription(e.target.value)}
-          onBlur={save}
-          onKeyDown={(e) => handleKeyDown(e, 'description')}
+          value={draft.description}
+          onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+          onBlur={handleBlur}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') { const f = editingField; cancel(); returnFocus(f); }
+          }}
           rows={3}
         />
       ) : (
-        <p
-          className={`project-description editable-field${!project.description ? ' editable-placeholder' : ''}`}
+        <button
+          ref={descTriggerRef}
+          className={`editable-field editable-trigger${!project.description ? ' editable-placeholder' : ''}`}
           onClick={() => startEditing('description')}
-          title="Klicken zum Bearbeiten"
+          aria-label={project.description ? `Beschreibung bearbeiten: ${project.description}` : 'Beschreibung hinzufügen'}
         >
-          {project.description || 'Beschreibung hinzufügen…'}
-        </p>
+          <p className="project-description">
+            {project.description || 'Beschreibung hinzufügen…'}
+          </p>
+        </button>
       )}
 
       {stats.total > 0 && (
         <div className="progress-section">
-          <div className="progress-bar">
-            <div className="progress-done" style={{ width: `${donePct}%` }} title={`Done: ${stats.done}`} />
-            <div className="progress-in-progress" style={{ width: `${progressPct}%` }} title={`In Progress: ${stats.inProgress}`} />
-            <div className="progress-open" style={{ width: `${openPct}%` }} title={`Open: ${stats.open}`} />
+          <div
+            className="progress-bar"
+            role="img"
+            aria-label={`Fortschritt: ${stats.done} erledigt, ${stats.inProgress} in Bearbeitung, ${stats.open} offen`}
+          >
+            <div className="progress-done" style={{ width: `${donePct}%` }} />
+            <div className="progress-in-progress" style={{ width: `${progressPct}%` }} />
+            <div className="progress-open" style={{ width: `${openPct}%` }} />
           </div>
           <div className="progress-labels">
             <span className="label-done">{stats.done} Done ({Math.round(donePct)}%)</span>

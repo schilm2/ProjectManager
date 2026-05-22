@@ -20,6 +20,8 @@ export interface Project {
   createdAt: string;
 }
 
+export type ProjectUpdate = Pick<Project, 'name' | 'description'>;
+
 export interface Contact {
   id: string;
   name: string;
@@ -28,6 +30,8 @@ export interface Contact {
   phone: string;
   createdAt: string;
 }
+
+export type ContactUpdate = Pick<Contact, 'name' | 'nickname' | 'email' | 'phone'>;
 
 export interface ProjectStats {
   total: number;
