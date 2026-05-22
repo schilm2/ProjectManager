@@ -12,9 +12,7 @@ import {
   SyncStateEntry,
 } from '../db/database';
 import { Project, Todo, Note, Contact } from '../types';
-
-const STORAGE_KEY_URL = 'lmstudio-url';
-const STORAGE_KEY_MODEL = 'lmstudio-model';
+import { STORAGE_KEYS } from '../constants/storage';
 
 export interface SyncProgress {
   current: number;
@@ -160,8 +158,8 @@ Gib jetzt die aktualisierte Projektbeschreibung aus:`;
 }
 
 async function callLLM(prompt: string): Promise<string> {
-  const baseUrl = (localStorage.getItem(STORAGE_KEY_URL) || 'http://localhost:1234').replace(/\/+$/, '');
-  const model = localStorage.getItem(STORAGE_KEY_MODEL) || '';
+  const baseUrl = (localStorage.getItem(STORAGE_KEYS.LM_STUDIO_URL) || 'http://localhost:1234').replace(/\/+$/, '');
+  const model = localStorage.getItem(STORAGE_KEYS.LM_STUDIO_MODEL) || '';
 
   if (!model) {
     throw new Error('Kein LLM-Modell konfiguriert. Bitte zuerst in den Einstellungen ein Modell auswählen.');

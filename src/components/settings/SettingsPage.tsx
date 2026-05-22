@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Database } from 'sql.js';
 import { syncProjects, SyncProgress } from '../../services/syncProjects';
+import { STORAGE_KEYS } from '../../constants/storage';
 
 interface LMStudioModel {
   id: string;
@@ -10,8 +11,6 @@ interface LMStudioModel {
 }
 
 const DEFAULT_URL = 'http://localhost:1234';
-const STORAGE_KEY_URL = 'lmstudio-url';
-const STORAGE_KEY_MODEL = 'lmstudio-model';
 
 interface SettingsPageProps {
   db: Database;
@@ -19,11 +18,11 @@ interface SettingsPageProps {
 
 export function SettingsPage({ db }: SettingsPageProps) {
   const [baseUrl, setBaseUrl] = useState(() =>
-    localStorage.getItem(STORAGE_KEY_URL) || DEFAULT_URL
+    localStorage.getItem(STORAGE_KEYS.LM_STUDIO_URL) || DEFAULT_URL
   );
   const [models, setModels] = useState<LMStudioModel[]>([]);
   const [selectedModel, setSelectedModel] = useState(() =>
-    localStorage.getItem(STORAGE_KEY_MODEL) || ''
+    localStorage.getItem(STORAGE_KEYS.LM_STUDIO_MODEL) || ''
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +66,7 @@ export function SettingsPage({ db }: SettingsPageProps) {
       setModels(fetched);
       setConnected(true);
 
-      const savedModel = localStorage.getItem(STORAGE_KEY_MODEL) || '';
+      const savedModel = localStorage.getItem(STORAGE_KEYS.LM_STUDIO_MODEL) || '';
       if (savedModel && fetched.some(m => m.id === savedModel)) {
         setSelectedModel(savedModel);
       } else if (fetched.length > 0) {
@@ -88,18 +87,19 @@ export function SettingsPage({ db }: SettingsPageProps) {
   }, []);
 
   function handleConnect() {
-    localStorage.setItem(STORAGE_KEY_URL, baseUrl);
+    localStorage.setItem(STORAGE_KEYS.LM_STUDIO_URL, baseUrl);
     fetchModels(baseUrl);
   }
 
   function handleSave() {
-    localStorage.setItem(STORAGE_KEY_URL, baseUrl);
-    localStorage.setItem(STORAGE_KEY_MODEL, selectedModel);
+    localStorage.setItem(STORAGE_KEYS.LM_STUDIO_URL, baseUrl);
+    localStorage.setItem(STORAGE_KEYS.LM_STUDIO_MODEL, selectedModel);
   }
 
   async function handleSync() {
     setSyncing(true);
     setSyncLog([]);
+    setError(null);
     try {
       await syncProjects(db, (progress) => {
         setSyncLog(prev => {
@@ -112,6 +112,9 @@ export function SettingsPage({ db }: SettingsPageProps) {
           return [...prev, progress];
         });
       });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Synchronisierung fehlgeschlagen';
+      setError(message);
     } finally {
       setSyncing(false);
     }
