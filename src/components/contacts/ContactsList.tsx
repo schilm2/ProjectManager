@@ -73,18 +73,19 @@ export function ContactsList({ db, contacts, onRefresh, onSelect, onDelete, sele
         </form>
       )}
       <ul className="entity-items">
-        {contacts.map((c) => {
+        {contacts.map((c, idx) => {
           const initial = c.name.charAt(0).toUpperCase();
           const avatarVariants = ['a', 'b', 'c', 'd', 'e', 'f'];
           const avatarClass = avatarVariants[initial.charCodeAt(0) % avatarVariants.length];
           return (
             <li
               key={c.id}
-              className={`entity-item ${selectedId === c.id ? 'active' : ''}`}
+              className={`entity-item card-enter ${selectedId === c.id ? 'active' : ''}`}
               onClick={() => onSelect(c)}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter') onSelect(c); }}
+              style={{ animationDelay: `${idx * 0.05}s` }}
             >
               <div className="entity-item-info">
                 <span className={`contact-avatar contact-avatar-${avatarClass}`}>{initial}</span>

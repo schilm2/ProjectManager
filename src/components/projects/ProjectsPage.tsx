@@ -24,7 +24,6 @@ export function ProjectsPage({ db }: ProjectsPageProps) {
   const refresh = useCallback(() => setProjects(getAllProjects(db)), [db]);
 
   function handleDelete(id: string) {
-    // ProjectsList already calls onRefresh before invoking onDelete — no second refresh needed
     if (selected?.id === id) setSelected(null);
   }
 
@@ -39,8 +38,11 @@ export function ProjectsPage({ db }: ProjectsPageProps) {
     }
   }
 
+  const activeCount = projects.filter((p) => p.status === 'active').length;
+  const archivedCount = projects.filter((p) => p.status === 'archive').length;
+
   return (
-    <div>
+    <div className="view-enter">
       <div className="page-header">
         <h2>Projekte<span className="header-accent">Planung und Fortschritt</span></h2>
       </div>
@@ -50,8 +52,24 @@ export function ProjectsPage({ db }: ProjectsPageProps) {
           {selected ? (
             <ProjectDetail db={db} project={selected} onUpdate={handleUpdate} />
           ) : (
-            <div className="empty-state-centered">
-              <p>Wähle ein Projekt aus oder erstelle ein neues</p>
+            <div className="empty-state-projects">
+              <div className="empty-message">
+                <p>Select a project to view details</p>
+                <div className="empty-chips">
+                  <span className="empty-chip">
+                    <span className="empty-chip-dot violet" />
+                    {activeCount} active
+                  </span>
+                  <span className="empty-chip">
+                    <span className="empty-chip-dot orange" />
+                    {archivedCount} archived
+                  </span>
+                  <span className="empty-chip">
+                    <span className="empty-chip-dot cyan" />
+                    {projects.length} total
+                  </span>
+                </div>
+              </div>
             </div>
           )}
         </div>

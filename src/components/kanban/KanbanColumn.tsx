@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Todo } from '../../types';
+import { Todo, Contact } from '../../types';
 import { KanbanCard } from './KanbanCard';
 
 interface KanbanColumnProps {
@@ -11,9 +11,10 @@ interface KanbanColumnProps {
   onDelete: (id: string) => void;
   onAdd?: () => void;
   accentClass: string;
+  todoContacts: Map<string, Contact[]>;
 }
 
-export function KanbanColumn({ title, status, todos, onStatusChange, onEdit, onDelete, onAdd, accentClass }: KanbanColumnProps) {
+export function KanbanColumn({ title, status, todos, onStatusChange, onEdit, onDelete, onAdd, accentClass, todoContacts }: KanbanColumnProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
@@ -55,11 +56,12 @@ export function KanbanColumn({ title, status, todos, onStatusChange, onEdit, onD
             todo={todo}
             onEdit={onEdit}
             onDelete={onDelete}
+            contacts={todoContacts.get(todo.id) ?? []}
           />
         ))}
         {onAdd && (
           <div className="kanban-add-placeholder" onClick={onAdd} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onAdd(); }}>
-            + Aufgabe hinzufügen
+            + Aufgabe hinzufuegen
           </div>
         )}
       </div>

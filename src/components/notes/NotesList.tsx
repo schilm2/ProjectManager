@@ -56,14 +56,15 @@ export function NotesList({ db, onSelect, onDelete, selectedId, refreshKey }: No
         <button className="btn btn-primary" onClick={handleCreate}>+ Neue Notiz</button>
       </div>
       <ul className="notes-items">
-        {notes.map((note) => (
+        {notes.map((note, idx) => (
           <li
             key={note.id}
-            className={`note-item ${selectedId === note.id ? 'active' : ''}`}
+            className={`note-item card-enter ${selectedId === note.id ? 'active' : ''}`}
             onClick={() => onSelect(note)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter') onSelect(note); }}
+            style={{ animationDelay: `${idx * 0.05}s` }}
           >
             <div style={{ flex: 1, minWidth: 0 }}>
               <span className="note-item-title">{extractTitle(note.content)}</span>

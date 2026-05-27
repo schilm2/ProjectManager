@@ -19,7 +19,6 @@ export function ContactsPage({ db }: ContactsPageProps) {
   const refresh = useCallback(() => setContacts(getAllContacts(db)), [db]);
 
   function handleDelete(id: string) {
-    // ContactsList already calls onRefresh before invoking onDelete — no second refresh needed
     if (selected?.id === id) setSelected(null);
   }
 
@@ -35,7 +34,7 @@ export function ContactsPage({ db }: ContactsPageProps) {
   }
 
   return (
-    <div>
+    <div className="view-enter">
       <div className="page-header">
         <h2>Kontakte<span className="header-accent">Netzwerk und Verbindungen</span></h2>
       </div>
@@ -45,8 +44,15 @@ export function ContactsPage({ db }: ContactsPageProps) {
           {selected ? (
             <ContactDetail db={db} contact={selected} onUpdate={handleUpdate} />
           ) : (
-            <div className="empty-state-centered">
-              <p>Wähle einen Kontakt aus oder erstelle einen neuen</p>
+            <div className="empty-state-contacts">
+              <div className="empty-message">
+                <p>Select a contact</p>
+                <div className="empty-actions">
+                  <span className="empty-action-pill">Browse contacts</span>
+                  <span className="empty-action-pill">Add new contact</span>
+                  <span className="empty-action-pill">Import from file</span>
+                </div>
+              </div>
             </div>
           )}
         </div>

@@ -44,7 +44,7 @@ export function NotesPage({ db }: NotesPageProps) {
   }
 
   return (
-    <div>
+    <div className="view-enter">
       <div className="page-header">
         <h2>Notizen<span className="header-accent">Gedanken festhalten</span></h2>
       </div>
@@ -54,8 +54,20 @@ export function NotesPage({ db }: NotesPageProps) {
           {selectedNote ? (
             <NoteEditor db={db} note={selectedNote} onSave={handleSave} />
           ) : (
-            <div className="empty-state-centered">
-              <p>Wähle eine Notiz aus oder erstelle eine neue</p>
+            <div className="empty-state-notes">
+              <div className="ruled-lines">
+                <div className="ruled-line" />
+                <div className="ruled-line" />
+                <div className="ruled-line" />
+                <div className="ruled-line" />
+                <div className="ruled-line" />
+                <div className="ruled-line" />
+                <div className="ruled-line" />
+                <div className="ruled-line" />
+              </div>
+              <div className="empty-message">
+                <p>Choose a note to read</p>
+              </div>
             </div>
           )}
         </div>

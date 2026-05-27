@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Database } from 'sql.js';
-import { Todo } from '../../types';
+import { Todo, Contact } from '../../types';
 import {
   getAllTodos,
   createTodo,
@@ -31,6 +31,21 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const allContacts = useMemo(() => getAllContacts(db), [db]);
+
+  // Build a map of todoId -> Contact[] for rendering in cards
+  const todoContactsMap = useMemo(() => {
+    const map = new Map<string, Contact[]>();
+    for (const todo of todos) {
+      const contactIds = getTodoContacts(db, todo.id);
+      if (contactIds.length > 0) {
+        const contacts = allContacts.filter((c) => contactIds.includes(c.id));
+        map.set(todo.id, contacts);
+      }
+    }
+    return map;
+  }, [db, todos, allContacts]);
 
   const refresh = useCallback(() => {
     setTodos(getAllTodos(db));
@@ -93,7 +108,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
   const done = todos.filter((t) => t.status === 'done');
 
   return (
-    <div className="kanban-page">
+    <div className="kanban-page view-enter">
       <div className="page-header">
         <h2>Board<span className="header-accent">Command Center</span></h2>
         <div className="board-actions">
@@ -131,6 +146,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
           onDelete={handleDelete}
           onAdd={handleCreate}
           accentClass="col-open"
+          todoContacts={todoContactsMap}
         />
         <KanbanColumn
           title="In Progress"
@@ -141,6 +157,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
           onDelete={handleDelete}
           onAdd={handleCreate}
           accentClass="col-progress"
+          todoContacts={todoContactsMap}
         />
         <KanbanColumn
           title="Done"
@@ -151,6 +168,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
           onDelete={handleDelete}
           onAdd={handleCreate}
           accentClass="col-done"
+          todoContacts={todoContactsMap}
         />
       </div>
       {deletingId && (
@@ -164,7 +182,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
         <TodoDialog
           todo={editingTodo}
           projects={getAllProjects(db)}
-          contacts={getAllContacts(db)}
+          contacts={allContacts}
           initialProjects={editingTodo ? getTodoProjects(db, editingTodo.id) : []}
           initialContacts={editingTodo ? getTodoContacts(db, editingTodo.id) : []}
           onSave={handleSave}

@@ -15,6 +15,10 @@ interface ProjectsListProps {
   autoCreate?: boolean;
 }
 
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+
 export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, selectedId, autoCreate }: ProjectsListProps) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
@@ -102,61 +106,54 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
           </div>
         </form>
       )}
-      <ul className="entity-items">
-        {active.map((p) => (
-          <li
+      <div className="projects-table-header">
+        <span>Name</span>
+        <span>Status</span>
+        <span>Priority</span>
+        <span>Created</span>
+      </div>
+      <div className="entity-items">
+        {active.map((p, idx) => (
+          <div
             key={p.id}
-            className={`entity-item ${selectedId === p.id ? 'active' : ''}`}
+            className={`project-table-row card-enter ${selectedId === p.id ? 'active' : ''}`}
             onClick={() => onSelect(p)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter') onSelect(p); }}
+            style={{ animationDelay: `${idx * 0.05}s` }}
           >
-            <div className="entity-item-info">
-              <span className="entity-item-name">{p.name}</span>
-              <span className="status-pill status-pill-active">aktiv</span>
-            </div>
-            <div className="entity-item-actions">
-              <button
-                className="btn-icon btn-archive"
-                onClick={(e) => handleStatusToggle(e, p)}
-                aria-label="Archivieren"
-                title="Archivieren"
-              >⊘</button>
-              <button className="btn-icon btn-danger" onClick={(e) => handleDelete(e, p.id)} aria-label="Löschen">&times;</button>
-            </div>
-          </li>
+            <span className="project-table-name">{p.name}</span>
+            <span className="status-pill status-pill-active">aktiv</span>
+            <span className="project-table-priority priority-active">--</span>
+            <span className="project-table-date">{formatDate(p.createdAt)}</span>
+          </div>
         ))}
         {active.length === 0 && archived.length === 0 && (
-          <li className="empty-state">Noch keine Projekte</li>
+          <div className="empty-state">Noch keine Projekte</div>
         )}
-      </ul>
+      </div>
       {archived.length > 0 && (
         <>
           <div className="archive-section-header">Archiviert</div>
-          <ul className="entity-items">
-            {archived.map((p) => (
-              <li
+          <div className="entity-items">
+            {archived.map((p, idx) => (
+              <div
                 key={p.id}
-                className={`entity-item entity-item-archived ${selectedId === p.id ? 'active' : ''}`}
+                className={`project-table-row card-enter ${selectedId === p.id ? 'active' : ''}`}
                 onClick={() => onSelect(p)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => { if (e.key === 'Enter') onSelect(p); }}
+                style={{ animationDelay: `${idx * 0.05}s`, opacity: 0.6 }}
               >
-                <span className="entity-item-name">{p.name}</span>
-                <div className="entity-item-actions">
-                  <button
-                    className="btn-icon btn-unarchive"
-                    onClick={(e) => handleStatusToggle(e, p)}
-                    aria-label="Reaktivieren"
-                    title="Reaktivieren"
-                  >↩</button>
-                  <button className="btn-icon btn-danger" onClick={(e) => handleDelete(e, p.id)} aria-label="Löschen">&times;</button>
-                </div>
-              </li>
+                <span className="project-table-name" style={{ textDecoration: 'line-through' }}>{p.name}</span>
+                <span className="status-pill status-pill-archive">archiv</span>
+                <span className="project-table-priority priority-archive">--</span>
+                <span className="project-table-date">{formatDate(p.createdAt)}</span>
+              </div>
             ))}
-          </ul>
+          </div>
         </>
       )}
       {archivingProject && (
