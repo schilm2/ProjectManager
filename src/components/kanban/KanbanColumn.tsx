@@ -9,10 +9,11 @@ interface KanbanColumnProps {
   onStatusChange: (id: string, status: Todo['status']) => void;
   onEdit: (todo: Todo) => void;
   onDelete: (id: string) => void;
+  onAdd?: () => void;
   accentClass: string;
 }
 
-export function KanbanColumn({ title, status, todos, onStatusChange, onEdit, onDelete, accentClass }: KanbanColumnProps) {
+export function KanbanColumn({ title, status, todos, onStatusChange, onEdit, onDelete, onAdd, accentClass }: KanbanColumnProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
@@ -56,6 +57,11 @@ export function KanbanColumn({ title, status, todos, onStatusChange, onEdit, onD
             onDelete={onDelete}
           />
         ))}
+        {onAdd && (
+          <div className="kanban-add-placeholder" onClick={onAdd} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') onAdd(); }}>
+            + Aufgabe hinzufügen
+          </div>
+        )}
       </div>
     </div>
   );

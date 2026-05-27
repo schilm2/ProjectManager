@@ -44,16 +44,21 @@ export function NotesPage({ db }: NotesPageProps) {
   }
 
   return (
-    <div className="notes-page">
-      <NotesList db={db} onSelect={setSelectedNote} onDelete={handleDelete} selectedId={selectedNote?.id ?? null} refreshKey={refreshKey} />
-      <div className="notes-detail">
-        {selectedNote ? (
-          <NoteEditor db={db} note={selectedNote} onSave={handleSave} />
-        ) : (
-          <div className="empty-state-centered">
-            <p>Wähle eine Notiz aus oder erstelle eine neue</p>
-          </div>
-        )}
+    <div>
+      <div className="page-header">
+        <h2>Notizen<span className="header-accent">Gedanken festhalten</span></h2>
+      </div>
+      <div className="notes-page">
+        <NotesList db={db} onSelect={setSelectedNote} onDelete={handleDelete} selectedId={selectedNote?.id ?? null} refreshKey={refreshKey} />
+        <div className="notes-detail">
+          {selectedNote ? (
+            <NoteEditor db={db} note={selectedNote} onSave={handleSave} />
+          ) : (
+            <div className="empty-state-centered">
+              <p>Wähle eine Notiz aus oder erstelle eine neue</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

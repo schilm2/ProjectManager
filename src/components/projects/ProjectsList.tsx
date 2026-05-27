@@ -3,6 +3,7 @@ import { Database } from 'sql.js';
 import { Project, Todo } from '../../types';
 import { createProject, deleteProject, updateProjectStatus, markProjectTodosDone, getOpenTodosForProject } from '../../db/database';
 import { ArchiveConfirmDialog } from './ArchiveConfirmDialog';
+import { DeleteConfirmDialog } from '../ui/DeleteConfirmDialog';
 
 interface ProjectsListProps {
   db: Database;
@@ -19,6 +20,7 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [archivingProject, setArchivingProject] = useState<{ project: Project; openTodos: Todo[] } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (autoCreate) {
@@ -39,9 +41,15 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
 
   function handleDelete(e: React.MouseEvent, id: string) {
     e.stopPropagation();
-    deleteProject(db, id);
+    setDeletingId(id);
+  }
+
+  function confirmDelete() {
+    if (!deletingId) return;
+    deleteProject(db, deletingId);
     onRefresh();
-    onDelete(id);
+    onDelete(deletingId);
+    setDeletingId(null);
   }
 
   function handleStatusToggle(e: React.MouseEvent, project: Project) {
@@ -104,7 +112,10 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter') onSelect(p); }}
           >
-            <span className="entity-item-name">{p.name}</span>
+            <div className="entity-item-info">
+              <span className="entity-item-name">{p.name}</span>
+              <span className="status-pill status-pill-active">aktiv</span>
+            </div>
             <div className="entity-item-actions">
               <button
                 className="btn-icon btn-archive"
@@ -154,6 +165,13 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
           openTodos={archivingProject.openTodos}
           onConfirm={handleArchiveConfirm}
           onCancel={() => setArchivingProject(null)}
+        />
+      )}
+      {deletingId && (
+        <DeleteConfirmDialog
+          itemName={projects.find((p) => p.id === deletingId)?.name ?? 'Projekt'}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeletingId(null)}
         />
       )}
     </div>

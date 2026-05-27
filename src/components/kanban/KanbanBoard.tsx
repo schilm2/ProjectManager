@@ -18,6 +18,7 @@ import {
 import { KanbanColumn } from './KanbanColumn';
 import { TodoDialog } from './TodoDialog';
 import { ProjectOverview } from './ProjectOverview';
+import { DeleteConfirmDialog } from '../ui/DeleteConfirmDialog';
 
 interface KanbanBoardProps {
   db: Database;
@@ -29,6 +30,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
   const [todos, setTodos] = useState<Todo[]>(() => getAllTodos(db));
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showDialog, setShowDialog] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     setTodos(getAllTodos(db));
@@ -76,8 +78,14 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
   }
 
   function handleDelete(id: string) {
-    deleteTodo(db, id);
+    setDeletingId(id);
+  }
+
+  function confirmDelete() {
+    if (!deletingId) return;
+    deleteTodo(db, deletingId);
     refresh();
+    setDeletingId(null);
   }
 
   const open = todos.filter((t) => t.status === 'open');
@@ -86,11 +94,31 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
 
   return (
     <div className="kanban-page">
-      <div className="board-actions">
-        <button className="btn btn-primary" onClick={handleCreate}>+ Neues ToDo</button>
-        <button className="btn" onClick={() => navigate('/notes', { state: { autoCreate: true } })}>+ Neue Notiz</button>
-        <button className="btn" onClick={() => navigate('/projects', { state: { autoCreate: true } })}>+ Neues Projekt</button>
-        <button className="btn" onClick={() => navigate('/contacts', { state: { autoCreate: true } })}>+ Neuer Kontakt</button>
+      <div className="page-header">
+        <h2>Board<span className="header-accent">Command Center</span></h2>
+        <div className="board-actions">
+          <button className="btn btn-primary" onClick={handleCreate}>+ Neues ToDo</button>
+          <button className="btn" onClick={() => navigate('/notes', { state: { autoCreate: true } })}>+ Neue Notiz</button>
+          <button className="btn" onClick={() => navigate('/projects', { state: { autoCreate: true } })}>+ Neues Projekt</button>
+          <button className="btn" onClick={() => navigate('/contacts', { state: { autoCreate: true } })}>+ Neuer Kontakt</button>
+        </div>
+      </div>
+      <div className="kanban-stats-bar">
+        <div className="kanban-stat">
+          <span className="kanban-stat-dot open" />
+          <span className="kanban-stat-count">{open.length}</span>
+          <span>Offen</span>
+        </div>
+        <div className="kanban-stat">
+          <span className="kanban-stat-dot progress" />
+          <span className="kanban-stat-count">{inProgress.length}</span>
+          <span>In Arbeit</span>
+        </div>
+        <div className="kanban-stat">
+          <span className="kanban-stat-dot done" />
+          <span className="kanban-stat-count">{done.length}</span>
+          <span>Erledigt</span>
+        </div>
       </div>
       <ProjectOverview db={db} />
       <div className="kanban-board">
@@ -101,6 +129,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
           onStatusChange={handleStatusChange}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onAdd={handleCreate}
           accentClass="col-open"
         />
         <KanbanColumn
@@ -110,6 +139,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
           onStatusChange={handleStatusChange}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onAdd={handleCreate}
           accentClass="col-progress"
         />
         <KanbanColumn
@@ -119,9 +149,17 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
           onStatusChange={handleStatusChange}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onAdd={handleCreate}
           accentClass="col-done"
         />
       </div>
+      {deletingId && (
+        <DeleteConfirmDialog
+          itemName={todos.find((t) => t.id === deletingId)?.name ?? 'ToDo'}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeletingId(null)}
+        />
+      )}
       {showDialog && (
         <TodoDialog
           todo={editingTodo}

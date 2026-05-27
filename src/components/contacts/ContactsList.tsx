@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Database } from 'sql.js';
 import { Contact } from '../../types';
 import { createContact, deleteContact } from '../../db/database';
+import { DeleteConfirmDialog } from '../ui/DeleteConfirmDialog';
 
 interface ContactsListProps {
   db: Database;
@@ -15,6 +16,7 @@ interface ContactsListProps {
 
 export function ContactsList({ db, contacts, onRefresh, onSelect, onDelete, selectedId, autoCreate }: ContactsListProps) {
   const [showForm, setShowForm] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (autoCreate) {
@@ -41,9 +43,15 @@ export function ContactsList({ db, contacts, onRefresh, onSelect, onDelete, sele
 
   function handleDelete(e: React.MouseEvent, id: string) {
     e.stopPropagation();
-    deleteContact(db, id);
+    setDeletingId(id);
+  }
+
+  function confirmDelete() {
+    if (!deletingId) return;
+    deleteContact(db, deletingId);
     onRefresh();
-    onDelete(id);
+    onDelete(deletingId);
+    setDeletingId(null);
   }
 
   return (
@@ -65,24 +73,39 @@ export function ContactsList({ db, contacts, onRefresh, onSelect, onDelete, sele
         </form>
       )}
       <ul className="entity-items">
-        {contacts.map((c) => (
-          <li
-            key={c.id}
-            className={`entity-item ${selectedId === c.id ? 'active' : ''}`}
-            onClick={() => onSelect(c)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter') onSelect(c); }}
-          >
-            <div className="entity-item-info">
-              <span className="entity-item-name">{c.name}</span>
-              {c.nickname && <span className="entity-item-sub">({c.nickname})</span>}
-            </div>
-            <button className="btn-icon btn-danger" onClick={(e) => handleDelete(e, c.id)} aria-label="Löschen">&times;</button>
-          </li>
-        ))}
+        {contacts.map((c) => {
+          const initial = c.name.charAt(0).toUpperCase();
+          const avatarVariants = ['a', 'b', 'c', 'd', 'e', 'f'];
+          const avatarClass = avatarVariants[initial.charCodeAt(0) % avatarVariants.length];
+          return (
+            <li
+              key={c.id}
+              className={`entity-item ${selectedId === c.id ? 'active' : ''}`}
+              onClick={() => onSelect(c)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter') onSelect(c); }}
+            >
+              <div className="entity-item-info">
+                <span className={`contact-avatar contact-avatar-${avatarClass}`}>{initial}</span>
+                <div>
+                  <span className="entity-item-name">{c.name}</span>
+                  {c.nickname && <span className="contact-item-role">{c.nickname}</span>}
+                </div>
+              </div>
+              <button className="btn-icon btn-danger" onClick={(e) => handleDelete(e, c.id)} aria-label="Löschen">&times;</button>
+            </li>
+          );
+        })}
         {contacts.length === 0 && <li className="empty-state">Noch keine Kontakte</li>}
       </ul>
+      {deletingId && (
+        <DeleteConfirmDialog
+          itemName={contacts.find((c) => c.id === deletingId)?.name ?? 'Kontakt'}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeletingId(null)}
+        />
+      )}
     </div>
   );
 }

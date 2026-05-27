@@ -40,16 +40,21 @@ export function ProjectsPage({ db }: ProjectsPageProps) {
   }
 
   return (
-    <div className="split-page">
-      <ProjectsList db={db} projects={projects} onRefresh={refresh} onSelect={setSelected} onDelete={handleDelete} selectedId={selected?.id ?? null} autoCreate={autoCreate} />
-      <div className="split-detail">
-        {selected ? (
-          <ProjectDetail db={db} project={selected} onUpdate={handleUpdate} />
-        ) : (
-          <div className="empty-state-centered">
-            <p>Wähle ein Projekt aus oder erstelle ein neues</p>
-          </div>
-        )}
+    <div>
+      <div className="page-header">
+        <h2>Projekte<span className="header-accent">Planung und Fortschritt</span></h2>
+      </div>
+      <div className="split-page">
+        <ProjectsList db={db} projects={projects} onRefresh={refresh} onSelect={setSelected} onDelete={handleDelete} selectedId={selected?.id ?? null} autoCreate={autoCreate} />
+        <div className="split-detail">
+          {selected ? (
+            <ProjectDetail db={db} project={selected} onUpdate={handleUpdate} />
+          ) : (
+            <div className="empty-state-centered">
+              <p>Wähle ein Projekt aus oder erstelle ein neues</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

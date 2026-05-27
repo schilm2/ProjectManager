@@ -35,16 +35,21 @@ export function ContactsPage({ db }: ContactsPageProps) {
   }
 
   return (
-    <div className="split-page">
-      <ContactsList db={db} contacts={contacts} onRefresh={refresh} onSelect={setSelected} onDelete={handleDelete} selectedId={selected?.id ?? null} autoCreate={autoCreate} />
-      <div className="split-detail">
-        {selected ? (
-          <ContactDetail db={db} contact={selected} onUpdate={handleUpdate} />
-        ) : (
-          <div className="empty-state-centered">
-            <p>Wähle einen Kontakt aus oder erstelle einen neuen</p>
-          </div>
-        )}
+    <div>
+      <div className="page-header">
+        <h2>Kontakte<span className="header-accent">Netzwerk und Verbindungen</span></h2>
+      </div>
+      <div className="split-page">
+        <ContactsList db={db} contacts={contacts} onRefresh={refresh} onSelect={setSelected} onDelete={handleDelete} selectedId={selected?.id ?? null} autoCreate={autoCreate} />
+        <div className="split-detail">
+          {selected ? (
+            <ContactDetail db={db} contact={selected} onUpdate={handleUpdate} />
+          ) : (
+            <div className="empty-state-centered">
+              <p>Wähle einen Kontakt aus oder erstelle einen neuen</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
