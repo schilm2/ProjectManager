@@ -20,7 +20,7 @@ export function CircleAccent({ children }: CircleAccentProps) {
         <ellipse
           cx="50" cy="20" rx="47" ry="17"
           fill="none"
-          stroke="#D30800"
+          stroke="#8b5cf6"
           strokeWidth="3.5"
           strokeLinecap="round"
           pathLength="100"
