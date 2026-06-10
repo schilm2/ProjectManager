@@ -1,10 +1,10 @@
 import { useMemo, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Database } from 'sql.js';
-import Markdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { Project, ProjectUpdate } from '../../types';
 import { getProjectStats, getProjectTodos, getProjectNotes } from '../../db/database';
+import { RichTextarea } from '../ui/RichTextarea';
+import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
 interface ProjectDetailProps {
   db: Database;
@@ -105,17 +105,17 @@ export function ProjectDetail({ db, project, onUpdate }: ProjectDetailProps) {
       )}
 
       {editingField === 'description' ? (
-        <textarea
+        <RichTextarea
           ref={descRef}
           aria-label="Beschreibung"
           className="editable-input editable-description"
           value={draft.description}
-          onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+          onChange={(description) => setDraft({ ...draft, description })}
           onBlur={handleBlur}
           onKeyDown={(e) => {
             if (e.key === 'Escape') { const f = editingField; cancel(); returnFocus(f); }
           }}
-          rows={3}
+          rows={8}
         />
       ) : (
         <button
@@ -126,7 +126,7 @@ export function ProjectDetail({ db, project, onUpdate }: ProjectDetailProps) {
         >
           {project.description ? (
             <div className="project-description project-description-md">
-              <Markdown remarkPlugins={[remarkGfm]}>{project.description}</Markdown>
+              <MarkdownRenderer>{project.description}</MarkdownRenderer>
             </div>
           ) : (
             <p className="project-description">Beschreibung hinzufügen…</p>

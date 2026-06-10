@@ -7,6 +7,8 @@ import { NotesPage } from './components/notes/NotesPage';
 import { ProjectsPage } from './components/projects/ProjectsPage';
 import { ContactsPage } from './components/contacts/ContactsPage';
 import { SettingsPage } from './components/settings/SettingsPage';
+import { ToastProvider } from './context/ToastContext';
+import { ToastContainer } from './components/ui/ToastContainer';
 
 interface ErrorBoundaryState {
   error: Error | null;
@@ -56,17 +58,20 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<KanbanBoard db={db} />} />
-            <Route path="/notes" element={<NotesPage db={db} />} />
-            <Route path="/projects" element={<ProjectsPage db={db} />} />
-            <Route path="/contacts" element={<ContactsPage db={db} />} />
-            <Route path="/settings" element={<SettingsPage db={db} />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<KanbanBoard db={db} />} />
+              <Route path="/notes" element={<NotesPage db={db} />} />
+              <Route path="/projects" element={<ProjectsPage db={db} />} />
+              <Route path="/contacts" element={<ContactsPage db={db} />} />
+              <Route path="/settings" element={<SettingsPage db={db} />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+        <ToastContainer />
+      </ToastProvider>
     </ErrorBoundary>
   );
 }

@@ -108,6 +108,14 @@ async function initDB(): Promise<Database> {
     if (!msg.includes('duplicate column')) throw e;
   }
 
+  // Migration: add description column to todos if missing
+  try {
+    db.run("ALTER TABLE todos ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '';
+    if (!msg.includes('duplicate column')) throw e;
+  }
+
   persist();
   return db;
 }
@@ -138,7 +146,7 @@ export function persist(): void {
 export function getAllTodos(database: Database): Todo[] {
   const threeDaysAgo = new Date(Date.now() - DONE_VISIBILITY_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const results = database.exec(
-    `SELECT id, name, priority, status, done_at, created_at FROM todos
+    `SELECT id, name, description, priority, status, done_at, created_at FROM todos
      WHERE NOT (status = 'done' AND done_at < ?)
      ORDER BY created_at DESC`,
     [threeDaysAgo]
@@ -147,10 +155,11 @@ export function getAllTodos(database: Database): Todo[] {
   return results[0].values.map((row) => ({
     id: row[0] as string,
     name: row[1] as string,
-    priority: row[2] as Todo['priority'],
-    status: row[3] as Todo['status'],
-    doneAt: row[4] as string | null,
-    createdAt: row[5] as string,
+    description: (row[2] as string) ?? '',
+    priority: row[3] as Todo['priority'],
+    status: row[4] as Todo['status'],
+    doneAt: row[5] as string | null,
+    createdAt: row[6] as string,
   }));
 }
 
@@ -158,11 +167,11 @@ export function createTodo(database: Database, name: string, priority: Todo['pri
   const id = uuid();
   const createdAt = new Date().toISOString();
   database.run(
-    'INSERT INTO todos (id, name, priority, status, created_at) VALUES (?, ?, ?, ?, ?)',
-    [id, name, priority, 'open', createdAt]
+    'INSERT INTO todos (id, name, description, priority, status, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, name, '', priority, 'open', createdAt]
   );
   persist();
-  return { id, name, priority, status: 'open', doneAt: null, createdAt };
+  return { id, name, description: '', priority, status: 'open', doneAt: null, createdAt };
 }
 
 export function markProjectTodosDone(database: Database, projectId: string): void {
@@ -185,8 +194,8 @@ export function updateTodoStatus(database: Database, id: string, status: Todo['s
   persist();
 }
 
-export function updateTodo(database: Database, id: string, name: string, priority: Todo['priority']): void {
-  database.run('UPDATE todos SET name = ?, priority = ? WHERE id = ?', [name, priority, id]);
+export function updateTodo(database: Database, id: string, name: string, priority: Todo['priority'], description: string = ''): void {
+  database.run('UPDATE todos SET name = ?, priority = ?, description = ? WHERE id = ?', [name, priority, description, id]);
   persist();
 }
 
@@ -230,11 +239,24 @@ export function getTodoContacts(database: Database, todoId: string): string[] {
 export function getAllNotes(database: Database): Note[] {
   const results = database.exec('SELECT id, content, created_at FROM notes ORDER BY created_at DESC');
   if (!results.length) return [];
-  return results[0].values.map((row) => ({
+  const notes = results[0].values.map((row) => ({
     id: row[0] as string,
     content: row[1] as string,
     createdAt: row[2] as string,
   }));
+  const projectResults = database.exec(
+    `SELECT np.note_id, p.name FROM note_projects np JOIN projects p ON p.id = np.project_id`
+  );
+  const projectsByNote: Record<string, string[]> = {};
+  if (projectResults.length) {
+    for (const row of projectResults[0].values) {
+      const noteId = row[0] as string;
+      const name = row[1] as string;
+      if (!projectsByNote[noteId]) projectsByNote[noteId] = [];
+      projectsByNote[noteId].push(name);
+    }
+  }
+  return notes.map((n) => ({ ...n, projectNames: projectsByNote[n.id] ?? [] }));
 }
 
 export function createNote(database: Database): Note {
@@ -314,7 +336,7 @@ export function updateProjectStatus(database: Database, id: string, status: Proj
 
 export function getOpenTodosForProject(database: Database, projectId: string): Todo[] {
   const results = database.exec(
-    `SELECT t.id, t.name, t.priority, t.status, t.done_at, t.created_at
+    `SELECT t.id, t.name, t.description, t.priority, t.status, t.done_at, t.created_at
      FROM todos t JOIN todo_projects tp ON tp.todo_id = t.id
      WHERE tp.project_id = ? AND t.status != 'done'
      ORDER BY t.created_at DESC`,
@@ -324,10 +346,11 @@ export function getOpenTodosForProject(database: Database, projectId: string): T
   return results[0].values.map((row) => ({
     id: row[0] as string,
     name: row[1] as string,
-    priority: row[2] as Todo['priority'],
-    status: row[3] as Todo['status'],
-    doneAt: row[4] as string | null,
-    createdAt: row[5] as string,
+    description: (row[2] as string) ?? '',
+    priority: row[3] as Todo['priority'],
+    status: row[4] as Todo['status'],
+    doneAt: row[5] as string | null,
+    createdAt: row[6] as string,
   }));
 }
 
@@ -365,7 +388,7 @@ export function getProjectStats(database: Database, projectId: string): ProjectS
 
 export function getProjectTodos(database: Database, projectId: string): Todo[] {
   const results = database.exec(
-    `SELECT t.id, t.name, t.priority, t.status, t.done_at, t.created_at
+    `SELECT t.id, t.name, t.description, t.priority, t.status, t.done_at, t.created_at
      FROM todos t JOIN todo_projects tp ON tp.todo_id = t.id
      WHERE tp.project_id = ? ORDER BY t.created_at DESC`,
     [projectId]
@@ -374,10 +397,11 @@ export function getProjectTodos(database: Database, projectId: string): Todo[] {
   return results[0].values.map((row) => ({
     id: row[0] as string,
     name: row[1] as string,
-    priority: row[2] as Todo['priority'],
-    status: row[3] as Todo['status'],
-    doneAt: row[4] as string | null,
-    createdAt: row[5] as string,
+    description: (row[2] as string) ?? '',
+    priority: row[3] as Todo['priority'],
+    status: row[4] as Todo['status'],
+    doneAt: row[5] as string | null,
+    createdAt: row[6] as string,
   }));
 }
 
@@ -433,7 +457,7 @@ export function deleteContact(database: Database, id: string): void {
 
 export function getContactTodos(database: Database, contactId: string): Todo[] {
   const results = database.exec(
-    `SELECT t.id, t.name, t.priority, t.status, t.done_at, t.created_at
+    `SELECT t.id, t.name, t.description, t.priority, t.status, t.done_at, t.created_at
      FROM todos t JOIN todo_contacts tc ON tc.todo_id = t.id
      WHERE tc.contact_id = ? ORDER BY t.created_at DESC`,
     [contactId]
@@ -442,10 +466,11 @@ export function getContactTodos(database: Database, contactId: string): Todo[] {
   return results[0].values.map((row) => ({
     id: row[0] as string,
     name: row[1] as string,
-    priority: row[2] as Todo['priority'],
-    status: row[3] as Todo['status'],
-    doneAt: row[4] as string | null,
-    createdAt: row[5] as string,
+    description: (row[2] as string) ?? '',
+    priority: row[3] as Todo['priority'],
+    status: row[4] as Todo['status'],
+    doneAt: row[5] as string | null,
+    createdAt: row[6] as string,
   }));
 }
 

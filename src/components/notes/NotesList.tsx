@@ -44,11 +44,6 @@ export function NotesList({ db, onSelect, onDelete, selectedId, refreshKey }: No
     return firstLine.replace(/^#+\s*/, '') || 'Unbenannt';
   }
 
-  function extractPreview(content: string): string {
-    const lines = content.split('\n').filter((l) => !l.startsWith('#') && l.trim().length > 0);
-    return lines.slice(0, 2).join(' ').slice(0, 120) || '';
-  }
-
   return (
     <div className="notes-list">
       <div className="notes-list-header">
@@ -68,8 +63,12 @@ export function NotesList({ db, onSelect, onDelete, selectedId, refreshKey }: No
           >
             <div style={{ flex: 1, minWidth: 0 }}>
               <span className="note-item-title">{extractTitle(note.content)}</span>
-              {extractPreview(note.content) && (
-                <div className="note-item-preview">{extractPreview(note.content)}</div>
+              {note.projectNames && note.projectNames.length > 0 && (
+                <div className="note-item-tags">
+                  {note.projectNames.map((name) => (
+                    <span key={name} className="note-item-tag">{name}</span>
+                  ))}
+                </div>
               )}
             </div>
             <span className="note-item-date">{new Date(note.createdAt).toLocaleDateString('de-DE')}</span>

@@ -4,6 +4,7 @@ import { Project, Todo } from '../../types';
 import { createProject, deleteProject, updateProjectStatus, markProjectTodosDone, getOpenTodosForProject } from '../../db/database';
 import { ArchiveConfirmDialog } from './ArchiveConfirmDialog';
 import { DeleteConfirmDialog } from '../ui/DeleteConfirmDialog';
+import { RichTextarea } from '../ui/RichTextarea';
 
 interface ProjectsListProps {
   db: Database;
@@ -94,10 +95,10 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
             autoFocus
             required
           />
-          <textarea
+          <RichTextarea
             placeholder="Beschreibung"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
             rows={2}
           />
           <div className="inline-form-actions">
@@ -109,8 +110,6 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
       <div className="projects-table-header">
         <span>Name</span>
         <span>Status</span>
-        <span>Priority</span>
-        <span>Created</span>
       </div>
       <div className="entity-items">
         {active.map((p, idx) => (
@@ -125,8 +124,6 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
           >
             <span className="project-table-name">{p.name}</span>
             <span className="status-pill status-pill-active">aktiv</span>
-            <span className="project-table-priority priority-active">--</span>
-            <span className="project-table-date">{formatDate(p.createdAt)}</span>
           </div>
         ))}
         {active.length === 0 && archived.length === 0 && (
@@ -149,8 +146,6 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
               >
                 <span className="project-table-name" style={{ textDecoration: 'line-through' }}>{p.name}</span>
                 <span className="status-pill status-pill-archive">archiv</span>
-                <span className="project-table-priority priority-archive">--</span>
-                <span className="project-table-date">{formatDate(p.createdAt)}</span>
               </div>
             ))}
           </div>

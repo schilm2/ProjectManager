@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Database } from 'sql.js';
-import { Todo, Contact } from '../../types';
+import { Todo, Contact, Project } from '../../types';
+import { useToast } from '../../context/ToastContext';
 import {
   getAllTodos,
   createTodo,
@@ -14,6 +15,7 @@ import {
   getTodoContacts,
   getAllProjects,
   getAllContacts,
+  createProject,
 } from '../../db/database';
 import { KanbanColumn } from './KanbanColumn';
 import { TodoDialog } from './TodoDialog';
@@ -27,12 +29,14 @@ interface KanbanBoardProps {
 export function KanbanBoard({ db }: KanbanBoardProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { addToast } = useToast();
   const [todos, setTodos] = useState<Todo[]>(() => getAllTodos(db));
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [showDialog, setShowDialog] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const allContacts = useMemo(() => getAllContacts(db), [db]);
+  const allProjects = useMemo(() => getAllProjects(db), [db]);
 
   // Build a map of todoId -> Contact[] for rendering in cards
   const todoContactsMap = useMemo(() => {
@@ -46,6 +50,19 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
     }
     return map;
   }, [db, todos, allContacts]);
+
+  // Build a map of todoId -> Project[] for rendering in cards
+  const todoProjectsMap = useMemo(() => {
+    const map = new Map<string, Project[]>();
+    for (const todo of todos) {
+      const projectIds = getTodoProjects(db, todo.id);
+      if (projectIds.length > 0) {
+        const projects = allProjects.filter((p) => projectIds.includes(p.id));
+        map.set(todo.id, projects);
+      }
+    }
+    return map;
+  }, [db, todos, allProjects]);
 
   const refresh = useCallback(() => {
     setTodos(getAllTodos(db));
@@ -63,6 +80,12 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
     }
   }, [location.state, todos, navigate, location.pathname]);
 
+  function handleCreateProject(name: string) {
+    const project = createProject(db, name, '');
+    refresh();
+    return project;
+  }
+
   function handleCreate() {
     setEditingTodo(null);
     setShowDialog(true);
@@ -73,23 +96,35 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
     setShowDialog(true);
   }
 
-  function handleSave(name: string, priority: Todo['priority'], projectIds: string[], contactIds: string[]) {
-    if (editingTodo) {
-      updateTodo(db, editingTodo.id, name, priority);
-      setTodoProjects(db, editingTodo.id, projectIds);
-      setTodoContacts(db, editingTodo.id, contactIds);
-    } else {
-      const newTodo = createTodo(db, name, priority);
-      setTodoProjects(db, newTodo.id, projectIds);
-      setTodoContacts(db, newTodo.id, contactIds);
+  function handleSave(name: string, priority: Todo['priority'], projectIds: string[], contactIds: string[], description: string) {
+    try {
+      if (editingTodo) {
+        updateTodo(db, editingTodo.id, name, priority, description);
+        setTodoProjects(db, editingTodo.id, projectIds);
+        setTodoContacts(db, editingTodo.id, contactIds);
+        addToast('ToDo aktualisiert', 'success');
+      } else {
+        const newTodo = createTodo(db, name, priority);
+        setTodoProjects(db, newTodo.id, projectIds);
+        setTodoContacts(db, newTodo.id, contactIds);
+        addToast('ToDo erstellt', 'success');
+      }
+      setShowDialog(false);
+      refresh();
+    } catch (error) {
+      addToast('Fehler beim Speichern des ToDos', 'error');
     }
-    setShowDialog(false);
-    refresh();
   }
 
   function handleStatusChange(id: string, status: Todo['status']) {
-    updateTodoStatus(db, id, status);
-    refresh();
+    try {
+      updateTodoStatus(db, id, status);
+      const statusLabel = { 'open': 'Offen', 'in_progress': 'In Arbeit', 'done': 'Erledigt' }[status];
+      addToast(`Status zu ${statusLabel} geändert`, 'success');
+      refresh();
+    } catch (error) {
+      addToast('Fehler beim Ändern des Status', 'error');
+    }
   }
 
   function handleDelete(id: string) {
@@ -98,14 +133,22 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
 
   function confirmDelete() {
     if (!deletingId) return;
-    deleteTodo(db, deletingId);
-    refresh();
-    setDeletingId(null);
+    try {
+      deleteTodo(db, deletingId);
+      addToast('ToDo gelöscht', 'success');
+      refresh();
+      setDeletingId(null);
+    } catch (error) {
+      addToast('Fehler beim Löschen des ToDos', 'error');
+    }
   }
 
-  const open = todos.filter((t) => t.status === 'open');
-  const inProgress = todos.filter((t) => t.status === 'in_progress');
-  const done = todos.filter((t) => t.status === 'done');
+  const PRIORITY_ORDER: Record<Todo['priority'], number> = { critical: 0, high: 1, normal: 2, low: 3 };
+  const byPriority = (a: Todo, b: Todo) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+
+  const open = todos.filter((t) => t.status === 'open').sort(byPriority);
+  const inProgress = todos.filter((t) => t.status === 'in_progress').sort(byPriority);
+  const done = todos.filter((t) => t.status === 'done').sort(byPriority);
 
   return (
     <div className="kanban-page view-enter">
@@ -147,6 +190,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
           onAdd={handleCreate}
           accentClass="col-open"
           todoContacts={todoContactsMap}
+          todoProjects={todoProjectsMap}
         />
         <KanbanColumn
           title="In Progress"
@@ -155,9 +199,9 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
           onStatusChange={handleStatusChange}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          onAdd={handleCreate}
           accentClass="col-progress"
           todoContacts={todoContactsMap}
+          todoProjects={todoProjectsMap}
         />
         <KanbanColumn
           title="Done"
@@ -166,9 +210,9 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
           onStatusChange={handleStatusChange}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          onAdd={handleCreate}
           accentClass="col-done"
           todoContacts={todoContactsMap}
+          todoProjects={todoProjectsMap}
         />
       </div>
       {deletingId && (
@@ -187,6 +231,7 @@ export function KanbanBoard({ db }: KanbanBoardProps) {
           initialContacts={editingTodo ? getTodoContacts(db, editingTodo.id) : []}
           onSave={handleSave}
           onCancel={() => setShowDialog(false)}
+          onCreateProject={handleCreateProject}
         />
       )}
     </div>

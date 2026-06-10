@@ -1,10 +1,11 @@
-import { Todo, Contact } from '../../types';
+import { Todo, Contact, Project } from '../../types';
 
 interface KanbanCardProps {
   todo: Todo;
   onEdit: (todo: Todo) => void;
   onDelete: (id: string) => void;
   contacts?: Contact[];
+  projects?: Project[];
 }
 
 const PRIORITY_LABELS: Record<Todo['priority'], string> = {
@@ -13,8 +14,6 @@ const PRIORITY_LABELS: Record<Todo['priority'], string> = {
   normal: 'Normal',
   low: 'Niedrig',
 };
-
-const AVATAR_VARIANTS = ['a', 'b', 'c', 'd', 'e', 'f'];
 
 function formatRelativeDate(dateStr: string): string {
   const date = new Date(dateStr);
@@ -28,7 +27,7 @@ function formatRelativeDate(dateStr: string): string {
   return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
 }
 
-export function KanbanCard({ todo, onEdit, onDelete, contacts = [] }: KanbanCardProps) {
+export function KanbanCard({ todo, onEdit, onDelete, contacts = [], projects = [] }: KanbanCardProps) {
   function handleDragStart(e: React.DragEvent<HTMLDivElement>) {
     e.dataTransfer.setData('todoId', todo.id);
     e.dataTransfer.effectAllowed = 'move';
@@ -47,31 +46,28 @@ export function KanbanCard({ todo, onEdit, onDelete, contacts = [] }: KanbanCard
       onClick={handleClick}
     >
       <div className="kanban-card-header">
+        <div></div>
         <div className="kanban-card-actions">
           <button className="btn-icon" onClick={() => onEdit(todo)} title="Bearbeiten">&#9998;</button>
           <button className="btn-icon btn-danger" onClick={() => onDelete(todo.id)} title="Loeschen">&times;</button>
         </div>
       </div>
       <div className="kanban-card-title-row">
-        <p className="kanban-card-title">{todo.name}</p>
+        <p className="kanban-card-title">
+          {projects.length > 0 ? `${projects[0].name} - ${todo.name}` : todo.name}
+        </p>
         <span className={`priority-badge priority-${todo.priority}`}>
           {PRIORITY_LABELS[todo.priority]}
         </span>
       </div>
-      <div className="kanban-card-meta">
-        {contacts.slice(0, 2).map((c) => {
-          const initial = c.name.charAt(0).toUpperCase();
-          const avatarClass = AVATAR_VARIANTS[initial.charCodeAt(0) % AVATAR_VARIANTS.length];
-          return (
-            <span
-              key={c.id}
-              className={`kanban-card-assignee contact-avatar-${avatarClass}`}
-              title={c.name}
-            >
-              {initial}
+      <div className="kanban-card-footer">
+        <div className="kanban-card-tags">
+          {contacts.slice(0, 3).map((c) => (
+            <span key={c.id} className="kanban-card-tag contact-tag">
+              {c.name}
             </span>
-          );
-        })}
+          ))}
+        </div>
         <span className="kanban-card-date">{formatRelativeDate(todo.createdAt)}</span>
       </div>
     </div>
