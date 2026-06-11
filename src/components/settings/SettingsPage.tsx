@@ -38,8 +38,19 @@ export function SettingsPage({ db }: SettingsPageProps) {
 
     const url = rawUrl.replace(/\/+$/, '').replace(/\/v1\/models$/, '');
 
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15_000);
+
     try {
-      const res = await fetch(`${url}/v1/models`);
+      let res: Response;
+      try {
+        res = await fetch(`${url}/v1/models`, { signal: controller.signal });
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          throw new Error('Zeitüberschreitung bei Verbindungsversuch (15s)');
+        }
+        throw err;
+      }
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
@@ -48,14 +59,16 @@ export function SettingsPage({ db }: SettingsPageProps) {
 
       let loadedIds = new Set<string>();
       try {
-        const loadedRes = await fetch(`${url}/lmstudio/v1/models/loaded`);
+        const loadedRes = await fetch(`${url}/lmstudio/v1/models/loaded`, { signal: controller.signal });
         if (loadedRes.ok) {
           const loadedJson = await loadedRes.json();
           const loadedModels: Array<{ id: string }> = loadedJson.data ?? [];
           loadedIds = new Set(loadedModels.map(m => m.id));
         }
-      } catch {
-        // Endpoint not available in older LM Studio versions
+      } catch (err) {
+        if (!(err instanceof DOMException && err.name === 'AbortError')) {
+          console.warn('[Settings] /lmstudio/v1/models/loaded unavailable:', err);
+        }
       }
 
       const fetched: LMStudioModel[] = allModels.map(m => ({
@@ -78,6 +91,7 @@ export function SettingsPage({ db }: SettingsPageProps) {
       setError(message);
       setConnected(false);
     } finally {
+      clearTimeout(timer);
       setLoading(false);
     }
   }, []);

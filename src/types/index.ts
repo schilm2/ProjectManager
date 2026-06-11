@@ -12,7 +12,7 @@ export interface Note {
   id: string;
   content: string;
   createdAt: string;
-  projectNames?: string[];
+  projectNames: string[];
 }
 
 export interface Project {

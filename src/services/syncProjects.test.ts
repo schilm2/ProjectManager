@@ -28,6 +28,7 @@ beforeEach(async () => {
     CREATE TABLE todos (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
       priority TEXT NOT NULL DEFAULT 'normal',
       status TEXT NOT NULL DEFAULT 'open',
       done_at TEXT,

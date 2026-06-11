@@ -157,6 +157,8 @@ ${allContactNames.length > 0 ? `## Erwähnte Personen: ${allContactNames.join(',
 Gib jetzt die aktualisierte Projektbeschreibung aus:`;
 }
 
+const LLM_TIMEOUT_MS = 30_000;
+
 async function callLLM(prompt: string): Promise<string> {
   const baseUrl = (localStorage.getItem(STORAGE_KEYS.LM_STUDIO_URL) || 'http://localhost:1234').replace(/\/+$/, '');
   const model = localStorage.getItem(STORAGE_KEYS.LM_STUDIO_MODEL) || '';
@@ -165,16 +167,30 @@ async function callLLM(prompt: string): Promise<string> {
     throw new Error('Kein LLM-Modell konfiguriert. Bitte zuerst in den Einstellungen ein Modell auswählen.');
   }
 
-  const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      max_tokens: 4096,
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 4096,
+      }),
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error(`LLM-Anfrage Timeout nach ${LLM_TIMEOUT_MS / 1000}s`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!response.ok) {
     throw new Error(`LLM-Anfrage fehlgeschlagen: HTTP ${response.status}`);

@@ -11,9 +11,14 @@ let dbPromise: Promise<Database> | null = null;
 
 export type PersistError = { type: 'quota' | 'encoding' | 'unknown'; message: string };
 let onPersistError: ((error: PersistError) => void) | null = null;
+let onDataLoss: (() => void) | null = null;
 
 export function setOnPersistError(handler: (error: PersistError) => void): void {
   onPersistError = handler;
+}
+
+export function setOnDataLoss(handler: () => void): void {
+  onDataLoss = handler;
 }
 
 export function getDB(): Promise<Database> {
@@ -21,6 +26,12 @@ export function getDB(): Promise<Database> {
     dbPromise = initDB();
   }
   return dbPromise;
+}
+
+function columnExists(database: Database, table: string, column: string): boolean {
+  const result = database.exec(`PRAGMA table_info(${table})`);
+  if (!result.length) return false;
+  return result[0].values.some(row => row[1] === column);
 }
 
 async function initDB(): Promise<Database> {
@@ -34,8 +45,10 @@ async function initDB(): Promise<Database> {
       const buf = Uint8Array.from(atob(saved), (c) => c.charCodeAt(0));
       db = new SQL.Database(buf);
     } catch {
-      console.error('[DB] Corrupt database in localStorage, starting fresh');
       db = new SQL.Database();
+      if (onDataLoss) {
+        onDataLoss();
+      }
     }
   } else {
     db = new SQL.Database();
@@ -100,20 +113,12 @@ async function initDB(): Promise<Database> {
     );
   `);
 
-  // Migration: add status column to projects if missing
-  try {
+  // Migrations: add columns if missing
+  if (!columnExists(db, 'projects', 'status')) {
     db.run("ALTER TABLE projects ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : '';
-    if (!msg.includes('duplicate column')) throw e;
   }
-
-  // Migration: add description column to todos if missing
-  try {
+  if (!columnExists(db, 'todos', 'description')) {
     db.run("ALTER TABLE todos ADD COLUMN description TEXT NOT NULL DEFAULT ''");
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : '';
-    if (!msg.includes('duplicate column')) throw e;
   }
 
   persist();
@@ -134,9 +139,10 @@ export function persist(): void {
     const type = message.includes('QuotaExceeded') ? 'quota' as const
       : message.includes('RangeError') ? 'encoding' as const
       : 'unknown' as const;
-    console.error('[DB] persist failed:', message);
     if (onPersistError) {
       onPersistError({ type, message });
+    } else {
+      throw err;
     }
   }
 }
@@ -269,7 +275,7 @@ export function createNote(database: Database): Note {
   const createdAt = new Date().toISOString();
   database.run('INSERT INTO notes (id, content, created_at) VALUES (?, ?, ?)', [id, '# Neue Notiz\n\n', createdAt]);
   persist();
-  return { id, content: '# Neue Notiz\n\n', createdAt };
+  return { id, content: '# Neue Notiz\n\n', createdAt, projectNames: [] };
 }
 
 export function updateNoteContent(database: Database, id: string, content: string): void {
@@ -321,7 +327,7 @@ export function getAllProjects(database: Database): Project[] {
     id: row[0] as string,
     name: row[1] as string,
     description: row[2] as string,
-    status: (row[3] as string ?? 'active') as Project['status'],
+    status: ((row[3] ?? 'active') as string) as Project['status'],
     createdAt: row[4] as string,
   }));
 }
@@ -422,6 +428,7 @@ export function getProjectNotes(database: Database, projectId: string): Note[] {
     id: row[0] as string,
     content: row[1] as string,
     createdAt: row[2] as string,
+    projectNames: [],
   }));
 }
 
@@ -491,6 +498,7 @@ export function getContactNotes(database: Database, contactId: string): Note[] {
     id: row[0] as string,
     content: row[1] as string,
     createdAt: row[2] as string,
+    projectNames: [],
   }));
 }
 
