@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Database } from 'sql.js';
-import { Project } from '../../types';
-import { createProject, deleteProject } from '../../db/database';
+import { Project, Todo } from '../../types';
+import { createProject, deleteProject, updateProjectStatus, markProjectTodosDone, getOpenTodosForProject } from '../../db/database';
+import { ArchiveConfirmDialog } from './ArchiveConfirmDialog';
+import { DeleteConfirmDialog } from '../ui/DeleteConfirmDialog';
+import { RichTextarea } from '../ui/RichTextarea';
 
 interface ProjectsListProps {
   db: Database;
@@ -10,12 +13,26 @@ interface ProjectsListProps {
   onSelect: (project: Project) => void;
   onDelete: (id: string) => void;
   selectedId: string | null;
+  autoCreate?: boolean;
 }
 
-export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, selectedId }: ProjectsListProps) {
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+
+export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, selectedId, autoCreate }: ProjectsListProps) {
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [archivingProject, setArchivingProject] = useState<{ project: Project; openTodos: Todo[] } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (autoCreate) {
+      setShowForm(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [autoCreate]);
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -29,10 +46,38 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
 
   function handleDelete(e: React.MouseEvent, id: string) {
     e.stopPropagation();
-    deleteProject(db, id);
-    onRefresh();
-    onDelete(id);
+    setDeletingId(id);
   }
+
+  function confirmDelete() {
+    if (!deletingId) return;
+    deleteProject(db, deletingId);
+    onRefresh();
+    onDelete(deletingId);
+    setDeletingId(null);
+  }
+
+  function handleStatusToggle(e: React.MouseEvent, project: Project) {
+    e.stopPropagation();
+    if (project.status === 'active') {
+      const openTodos = getOpenTodosForProject(db, project.id);
+      setArchivingProject({ project, openTodos });
+    } else {
+      updateProjectStatus(db, project.id, 'active');
+      onRefresh();
+    }
+  }
+
+  function handleArchiveConfirm() {
+    if (!archivingProject) return;
+    markProjectTodosDone(db, archivingProject.project.id);
+    updateProjectStatus(db, archivingProject.project.id, 'archive');
+    setArchivingProject(null);
+    onRefresh();
+  }
+
+  const active = projects.filter((p) => p.status !== 'archive');
+  const archived = projects.filter((p) => p.status === 'archive');
 
   return (
     <div className="projects-list">
@@ -50,10 +95,10 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
             autoFocus
             required
           />
-          <textarea
+          <RichTextarea
             placeholder="Beschreibung"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={setDescription}
             rows={2}
           />
           <div className="inline-form-actions">
@@ -62,22 +107,65 @@ export function ProjectsList({ db, projects, onRefresh, onSelect, onDelete, sele
           </div>
         </form>
       )}
-      <ul className="entity-items">
-        {projects.map((p) => (
-          <li
+      <div className="projects-table-header">
+        <span>Name</span>
+        <span>Status</span>
+      </div>
+      <div className="entity-items">
+        {active.map((p, idx) => (
+          <div
             key={p.id}
-            className={`entity-item ${selectedId === p.id ? 'active' : ''}`}
+            className={`project-table-row card-enter ${selectedId === p.id ? 'active' : ''}`}
             onClick={() => onSelect(p)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter') onSelect(p); }}
+            style={{ animationDelay: `${idx * 0.05}s` }}
           >
-            <span className="entity-item-name">{p.name}</span>
-            <button className="btn-icon btn-danger" onClick={(e) => handleDelete(e, p.id)} aria-label="Löschen">&times;</button>
-          </li>
+            <span className="project-table-name">{p.name}</span>
+            <span className="status-pill status-pill-active">aktiv</span>
+          </div>
         ))}
-        {projects.length === 0 && <li className="empty-state">Noch keine Projekte</li>}
-      </ul>
+        {active.length === 0 && archived.length === 0 && (
+          <div className="empty-state">Noch keine Projekte</div>
+        )}
+      </div>
+      {archived.length > 0 && (
+        <>
+          <div className="archive-section-header">Archiviert</div>
+          <div className="entity-items">
+            {archived.map((p, idx) => (
+              <div
+                key={p.id}
+                className={`project-table-row card-enter ${selectedId === p.id ? 'active' : ''}`}
+                onClick={() => onSelect(p)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter') onSelect(p); }}
+                style={{ animationDelay: `${idx * 0.05}s`, opacity: 0.6 }}
+              >
+                <span className="project-table-name" style={{ textDecoration: 'line-through' }}>{p.name}</span>
+                <span className="status-pill status-pill-archive">archiv</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      {archivingProject && (
+        <ArchiveConfirmDialog
+          projectName={archivingProject.project.name}
+          openTodos={archivingProject.openTodos}
+          onConfirm={handleArchiveConfirm}
+          onCancel={() => setArchivingProject(null)}
+        />
+      )}
+      {deletingId && (
+        <DeleteConfirmDialog
+          itemName={projects.find((p) => p.id === deletingId)?.name ?? 'Projekt'}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeletingId(null)}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,67 @@
+.rich-textarea-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.rich-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 8px 10px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.rich-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 32px;
+  padding: 0 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.rich-toolbar-btn:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+  color: var(--color-text);
+}
+
+.rich-toolbar-btn:active {
+  background: var(--glass-bg-active);
+  color: var(--color-accent);
+}
+
+/* Bold button — serif weight */
+.rich-toolbar-btn:first-child {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 700;
+  font-style: normal;
+}
+
+/* Italic button */
+.rich-toolbar-btn:nth-child(2) {
+  font-style: italic;
+  font-family: var(--font-serif);
+  font-size: 15px;
+}
+
+/* Textarea connects flush to toolbar */
+.rich-textarea-wrapper textarea {
+  border-radius: 0 0 var(--radius-md) var(--radius-md) !important;
+}

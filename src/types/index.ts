@@ -1,6 +1,7 @@
 export interface Todo {
   id: string;
   name: string;
+  description: string;
   priority: 'critical' | 'high' | 'normal' | 'low';
   status: 'open' | 'in_progress' | 'done';
   doneAt: string | null;
@@ -11,12 +12,14 @@ export interface Note {
   id: string;
   content: string;
   createdAt: string;
+  projectNames: string[];
 }
 
 export interface Project {
   id: string;
   name: string;
   description: string;
+  status: 'active' | 'archive';
   createdAt: string;
 }
 
@@ -38,4 +41,11 @@ export interface ProjectStats {
   open: number;
   inProgress: number;
   done: number;
+}
+
+export interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  duration?: number;
 }

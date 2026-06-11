@@ -2,6 +2,7 @@ import { Database } from 'sql.js';
 import { Note } from '../../types';
 import { getAllNotes, createNote, deleteNote } from '../../db/database';
 import { useState, useEffect } from 'react';
+import { DeleteConfirmDialog } from '../ui/DeleteConfirmDialog';
 
 interface NotesListProps {
   db: Database;
@@ -13,6 +14,7 @@ interface NotesListProps {
 
 export function NotesList({ db, onSelect, onDelete, selectedId, refreshKey }: NotesListProps) {
   const [notes, setNotes] = useState<Note[]>(() => getAllNotes(db));
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     setNotes(getAllNotes(db));
@@ -26,9 +28,15 @@ export function NotesList({ db, onSelect, onDelete, selectedId, refreshKey }: No
 
   function handleDelete(e: React.MouseEvent, id: string) {
     e.stopPropagation();
-    deleteNote(db, id);
+    setDeletingId(id);
+  }
+
+  function confirmDelete() {
+    if (!deletingId) return;
+    deleteNote(db, deletingId);
     setNotes(getAllNotes(db));
-    onDelete(id);
+    onDelete(deletingId);
+    setDeletingId(null);
   }
 
   function extractTitle(content: string): string {
@@ -43,22 +51,39 @@ export function NotesList({ db, onSelect, onDelete, selectedId, refreshKey }: No
         <button className="btn btn-primary" onClick={handleCreate}>+ Neue Notiz</button>
       </div>
       <ul className="notes-items">
-        {notes.map((note) => (
+        {notes.map((note, idx) => (
           <li
             key={note.id}
-            className={`note-item ${selectedId === note.id ? 'active' : ''}`}
+            className={`note-item card-enter ${selectedId === note.id ? 'active' : ''}`}
             onClick={() => onSelect(note)}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter') onSelect(note); }}
+            style={{ animationDelay: `${idx * 0.05}s` }}
           >
-            <span className="note-item-title">{extractTitle(note.content)}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span className="note-item-title">{extractTitle(note.content)}</span>
+              {note.projectNames && note.projectNames.length > 0 && (
+                <div className="note-item-tags">
+                  {note.projectNames.map((name) => (
+                    <span key={name} className="note-item-tag">{name}</span>
+                  ))}
+                </div>
+              )}
+            </div>
             <span className="note-item-date">{new Date(note.createdAt).toLocaleDateString('de-DE')}</span>
             <button className="btn-icon btn-danger" onClick={(e) => handleDelete(e, note.id)} aria-label="Löschen">&times;</button>
           </li>
         ))}
         {notes.length === 0 && <li className="empty-state">Noch keine Notizen</li>}
       </ul>
+      {deletingId && (
+        <DeleteConfirmDialog
+          itemName={notes.find((n) => n.id === deletingId) ? extractTitle(notes.find((n) => n.id === deletingId)!.content) : 'Notiz'}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeletingId(null)}
+        />
+      )}
     </div>
   );
 }
