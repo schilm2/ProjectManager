@@ -163,6 +163,11 @@ export function getAllTodos(database: Database): Todo[] {
   }));
 }
 
+export function todoExistsByName(database: Database, name: string): boolean {
+  const results = database.exec('SELECT 1 FROM todos WHERE name = ? LIMIT 1', [name]);
+  return results.length > 0 && results[0].values.length > 0;
+}
+
 export function createTodo(database: Database, name: string, priority: Todo['priority'] = 'normal'): Todo {
   const id = uuid();
   const createdAt = new Date().toISOString();

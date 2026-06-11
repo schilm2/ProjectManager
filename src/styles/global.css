@@ -1398,6 +1398,16 @@ body::after {
   margin-bottom: var(--space-sm);
 }
 
+.note-rendered a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.note-rendered a:hover {
+  color: var(--color-accent-hover);
+}
+
 .note-edit-area {
   display: flex;
   flex-direction: column;
@@ -1690,6 +1700,16 @@ body::after {
   background: rgba(212, 132, 90, 0.1);
   padding: 1px 4px;
   border-radius: var(--radius-sm);
+  color: var(--color-accent-hover);
+}
+
+.project-description-md a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.project-description-md a:hover {
   color: var(--color-accent-hover);
 }
 

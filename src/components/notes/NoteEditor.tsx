@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Database } from 'sql.js';
 import { Note, Project, Contact } from '../../types';
-import { updateNoteContent, getNoteProjects, getNoteContacts, setNoteProjects, setNoteContacts, getAllProjects, getAllContacts, createProject } from '../../db/database';
+import { updateNoteContent, getNoteProjects, getNoteContacts, setNoteProjects, setNoteContacts, getAllProjects, getAllContacts, createProject, createTodo, setTodoProjects, todoExistsByName } from '../../db/database';
 import { MultiSelect } from '../common/MultiSelect';
 import { RichTextarea } from '../ui/RichTextarea';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
@@ -34,6 +34,19 @@ export function NoteEditor({ db, note, onSave }: NoteEditorProps) {
   const save = useCallback(() => {
     try {
       updateNoteContent(db, note.id, content);
+      const projectIds = getNoteProjects(db, note.id);
+      for (const line of content.split('\n')) {
+        const match = line.match(/^(.+)\s*-->\s*TODO\s*$/);
+        if (match) {
+          const title = match[1].trim().replace(/^-\s*/, '');
+          if (!todoExistsByName(db, title)) {
+            const todo = createTodo(db, title);
+            if (projectIds.length > 0) {
+              setTodoProjects(db, todo.id, projectIds);
+            }
+          }
+        }
+      }
       setIsEditing(false);
       onSave?.();
     } catch (err) {
