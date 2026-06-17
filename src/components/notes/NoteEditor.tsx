@@ -83,34 +83,12 @@ export function NoteEditor({ db, note, onSave }: NoteEditorProps) {
     }
   }
 
+  const selectedContactLabels = contacts
+    .filter((c) => selectedContacts.includes(c.id))
+    .map((c) => c.name);
+
   return (
     <div className="note-editor">
-      <div className="note-editor-meta">
-        <div className="meta-row">
-          <span className="meta-label">Datum:</span>
-          <span>{new Date(note.createdAt).toLocaleDateString('de-DE')}</span>
-        </div>
-        <div className="meta-row">
-          <span className="meta-label">Projekte:</span>
-          <MultiSelect
-            options={projects.map((p) => ({ value: p.id, label: p.name }))}
-            selected={selectedProjects}
-            onChange={handleProjectsChange}
-            placeholder="Projekte..."
-            onCreateOption={handleCreateProject}
-            createOptionLabel="+ Neues Projekt"
-          />
-        </div>
-        <div className="meta-row">
-          <span className="meta-label">Personen:</span>
-          <MultiSelect
-            options={contacts.map((c) => ({ value: c.id, label: c.name }))}
-            selected={selectedContacts}
-            onChange={handleContactsChange}
-            placeholder="Personen..."
-          />
-        </div>
-      </div>
       <div className="note-editor-content">
         {isEditing ? (
           <div className="note-edit-area">
@@ -130,6 +108,40 @@ export function NoteEditor({ db, note, onSave }: NoteEditorProps) {
           </div>
         )}
       </div>
+      <aside className="note-editor-sidebar">
+        <div className="sidebar-section">
+          <span className="meta-label">Datum</span>
+          <span className="sidebar-value">{new Date(note.createdAt).toLocaleDateString('de-DE')}</span>
+        </div>
+        <div className="sidebar-section">
+          <span className="meta-label">Projekte</span>
+          <MultiSelect
+            options={projects.map((p) => ({ value: p.id, label: p.name }))}
+            selected={selectedProjects}
+            onChange={handleProjectsChange}
+            placeholder="Projekte..."
+            onCreateOption={handleCreateProject}
+            createOptionLabel="+ Neues Projekt"
+          />
+        </div>
+        <div className="sidebar-section">
+          <span className="meta-label">Personen</span>
+          <MultiSelect
+            options={contacts.map((c) => ({ value: c.id, label: c.name }))}
+            selected={selectedContacts}
+            onChange={handleContactsChange}
+            placeholder="Personen..."
+            hideTriggerLabels
+          />
+          {selectedContactLabels.length > 0 && (
+            <ul className="sidebar-persons-list">
+              {selectedContactLabels.map((name) => (
+                <li key={name} className="sidebar-person-item">{name}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }

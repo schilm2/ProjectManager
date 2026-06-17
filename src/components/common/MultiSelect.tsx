@@ -12,9 +12,10 @@ interface MultiSelectProps {
   placeholder?: string;
   onCreateOption?: (label: string) => void;
   createOptionLabel?: string;
+  hideTriggerLabels?: boolean;
 }
 
-export function MultiSelect({ options, selected, onChange, placeholder = 'Auswählen...', onCreateOption, createOptionLabel = '+ Neu erstellen' }: MultiSelectProps) {
+export function MultiSelect({ options, selected, onChange, placeholder = 'Auswählen...', onCreateOption, createOptionLabel = '+ Neu erstellen', hideTriggerLabels = false }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newLabel, setNewLabel] = useState('');
@@ -68,7 +69,7 @@ export function MultiSelect({ options, selected, onChange, placeholder = 'Auswä
         onClick={() => setIsOpen(!isOpen)}
       >
         <span>
-          {selectedLabels.length > 0 ? selectedLabels.join(', ') : placeholder}
+          {!hideTriggerLabels && selectedLabels.length > 0 ? selectedLabels.join(', ') : placeholder}
         </span>
         {selectedLabels.length > 0 && (
           <span className="count-badge">{selectedLabels.length}</span>

@@ -157,7 +157,7 @@ ${allContactNames.length > 0 ? `## Erwähnte Personen: ${allContactNames.join(',
 Gib jetzt die aktualisierte Projektbeschreibung aus:`;
 }
 
-const LLM_TIMEOUT_MS = 30_000;
+const LLM_TIMEOUT_MS = 300_000;
 
 async function callLLM(prompt: string): Promise<string> {
   const baseUrl = (localStorage.getItem(STORAGE_KEYS.LM_STUDIO_URL) || 'http://localhost:1234').replace(/\/+$/, '');

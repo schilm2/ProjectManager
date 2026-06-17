@@ -265,8 +265,9 @@ body::after {
   border-radius: var(--radius-md);
   text-decoration: none;
   color: var(--color-text-muted);
-  font-weight: 500;
-  font-size: 0.9rem;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-size: 1rem;
   transition:
     background var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out),
@@ -553,7 +554,8 @@ body::after {
 }
 
 .project-tile-name {
-  font-size: 0.875rem;
+  font-family: var(--font-serif);
+  font-size: 1rem;
   font-weight: 600;
   margin-bottom: var(--space-sm);
   white-space: nowrap;
@@ -928,7 +930,8 @@ body::after {
 }
 
 .kanban-card-title {
-  font-size: 0.95rem;
+  font-family: var(--font-serif);
+  font-size: 1rem;
   font-weight: 600;
   margin-bottom: var(--space-sm);
   color: var(--color-text);
@@ -1253,7 +1256,8 @@ body::after {
 
 .note-item-title {
   flex: 1;
-  font-size: 0.875rem;
+  font-family: var(--font-serif);
+  font-size: 1rem;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -1280,37 +1284,105 @@ body::after {
 /* === NOTE EDITOR === */
 .note-editor {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   height: 100%;
-}
-
-.note-editor-meta {
-  padding: var(--space-md);
-  border-bottom: 1px solid var(--glass-border);
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
-  align-items: center;
-  overflow: visible;
-}
-
-.meta-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.meta-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
 }
 
 .note-editor-content {
   flex: 1;
   overflow-y: auto;
+  min-width: 0;
+}
+
+.note-editor-sidebar {
+  width: 360px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+  padding: var(--space-lg) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  font-family: var(--font-serif);
+}
+
+.note-editor-sidebar .multi-select-trigger {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+.sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-lg) 0;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.sidebar-section:first-child {
+  padding-top: 0;
+}
+
+.sidebar-section:last-child {
+  border-bottom: none;
+}
+
+.sidebar-value {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  letter-spacing: 0.01em;
+}
+
+.sidebar-persons-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-xs) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-person-item {
+  font-size: 1rem;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  padding: var(--space-sm) var(--space-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  transition: background var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.sidebar-person-item::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.sidebar-person-item:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+}
+
+.meta-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-dim);
 }
 
 .note-rendered {
@@ -1508,8 +1580,9 @@ body::after {
 }
 
 .entity-item-name {
+  font-family: var(--font-serif);
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: var(--color-text);
 }
 
@@ -2891,8 +2964,9 @@ body::after {
 }
 
 .project-table-name {
+  font-family: var(--font-serif);
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 1rem;
   color: var(--color-text);
   white-space: nowrap;
   overflow: hidden;
