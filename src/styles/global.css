@@ -1255,7 +1255,7 @@ body::after {
 }
 
 .note-item-title {
-  flex: 1;
+  display: block;
   font-family: var(--font-serif);
   font-size: 1rem;
   font-weight: 500;
@@ -1268,6 +1268,8 @@ body::after {
 .note-item-date {
   font-size: 0.75rem;
   color: var(--color-text-dim);
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .notes-detail {
